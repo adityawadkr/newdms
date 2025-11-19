@@ -27,17 +27,36 @@ export const auth = betterAuth({
         enabled: true,
         autoSignIn: false, // Disable auto sign-in to force verification
         requireEmailVerification: true,
+        async sendResetPassword({ user, url, token }) {
+            try {
+                await transporter.sendMail({
+                    from: process.env.EMAIL_FROM || "noreply@example.com",
+                    to: user.email,
+                    subject: "Reset your password",
+                    html: `<p>Click the link below to reset your password:</p><a href="${url}">${url}</a>`,
+                });
+            } catch (error) {
+                console.error("Error sending reset password email:", error);
+                throw error;
+            }
+        },
     },
     plugins: [
         emailOTP({
             async sendVerificationOTP({ email, otp, type }) {
-                await transporter.sendMail({
-                    from: process.env.EMAIL_FROM || "noreply@example.com",
-                    to: email,
-                    subject: "Verify your email address",
-                    html: `<p>Your verification code is: <strong>${otp}</strong></p>`,
-                });
+                try {
+                    await transporter.sendMail({
+                        from: process.env.EMAIL_FROM || "noreply@example.com",
+                        to: email,
+                        subject: "Verify your email address",
+                        html: `<p>Your verification code is: <strong>${otp}</strong></p>`,
+                    });
+                } catch (error) {
+                    console.error("Error sending verification OTP:", error);
+                    throw error;
+                }
             },
+            sendVerificationOnSignUp: true,
         }),
     ],
     session: {
