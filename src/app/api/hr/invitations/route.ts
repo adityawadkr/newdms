@@ -61,7 +61,9 @@ export async function POST(req: Request) {
         })
 
         // Send email
-        const inviteLink = `${process.env.BETTER_AUTH_URL || "http://localhost:3000"}/register?token=${token}`
+        // Determine base URL from request to ensure it works on any deployment
+        const baseUrl = new URL(req.url).origin
+        const inviteLink = `${baseUrl}/register?token=${token}`
 
         await transporter.sendMail({
             from: process.env.EMAIL_FROM || "noreply@example.com",
