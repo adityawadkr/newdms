@@ -1,19 +1,32 @@
 import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 
-export const vehicles = sqliteTable('vehicles', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  vin: text('vin').notNull().unique(),
-  make: text('make').notNull(),
-  model: text('model').notNull(),
-  year: integer('year').notNull(),
-  category: text('category').notNull(),
-  color: text('color').notNull(),
-  price: integer('price').notNull(),
-  stock: integer('stock').notNull(),
-  reorderPoint: integer('reorder_point').notNull(),
-  status: text('status').notNull(),
-  createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
+export const invitation = sqliteTable("invitation", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  role: text("role").notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  inviterId: text("inviter_id").notNull().references(() => user.id),
+  status: text("status").notNull().default("pending"), // pending, accepted
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
+export const vehicle = sqliteTable("vehicle", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  vin: text("vin").notNull().unique(),
+  make: text("make").notNull(),
+  model: text("model").notNull(),
+  year: integer("year").notNull(),
+  category: text("category").notNull(),
+  color: text("color"),
+  price: integer("price").notNull(),
+  stock: integer("stock").notNull().default(0),
+  reorderPoint: integer("reorder_point").notNull().default(0),
+  status: text("status").notNull().default("in_stock"), // in_stock, reserved, sold
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export const leads = sqliteTable('leads', {
@@ -83,6 +96,7 @@ export const user = sqliteTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
   image: text("image"),
+  role: text("role").notNull().default("user"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });

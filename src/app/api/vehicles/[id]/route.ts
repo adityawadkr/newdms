@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { vehicles } from '@/db/schema';
+import { vehicle } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function GET(
@@ -16,19 +16,16 @@ export async function GET(
       }, { status: 400 });
     }
 
-    const vehicle = await db.select()
-      .from(vehicles)
-      .where(eq(vehicles.id, parseInt(id)))
-      .limit(1);
+    const foundVehicle = await db.select().from(vehicle).where(eq(vehicle.id, Number(id))).limit(1);
 
-    if (vehicle.length === 0) {
+    if (foundVehicle.length === 0) {
       return NextResponse.json({
         error: "Vehicle not found"
       }, { status: 404 });
     }
 
     return NextResponse.json({
-      data: vehicle[0]
+      data: foundVehicle[0]
     }, { status: 200 });
 
   } catch (error) {
@@ -94,8 +91,8 @@ export async function PUT(
 
     // Check if vehicle exists
     const existingVehicle = await db.select()
-      .from(vehicles)
-      .where(eq(vehicles.id, parseInt(id)))
+      .from(vehicle)
+      .where(eq(vehicle.id, Number(id)))
       .limit(1);
 
     if (existingVehicle.length === 0) {
@@ -107,11 +104,11 @@ export async function PUT(
     // Check VIN uniqueness if provided
     if (vin !== undefined) {
       const existingVin = await db.select()
-        .from(vehicles)
-        .where(eq(vehicles.vin, vin.trim()))
+        .from(vehicle)
+        .where(eq(vehicle.vin, vin.trim()))
         .limit(1);
 
-      if (existingVin.length > 0 && existingVin[0].id !== parseInt(id)) {
+      if (existingVin.length > 0 && existingVin[0].id !== Number(id)) {
         return NextResponse.json({
           error: "VIN must be unique"
         }, { status: 400 });
@@ -120,8 +117,14 @@ export async function PUT(
 
     // Prepare update data
     const updateData: any = {
-      updatedAt: Date.now()
+      updatedAt: new Date() // Fix: Use Date object if schema expects timestamp, or number if integer
     };
+    // Schema says: updatedAt: integer("updated_at", { mode: "timestamp" })
+    // So it expects a Date object if using drizzle-orm with { mode: "timestamp" }?
+    // Actually, if it's integer in sqlite, Drizzle handles the conversion if mode is timestamp.
+    // Let's check schema again.
+    // updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    // So it expects a Date object in JS.
 
     if (vin !== undefined) updateData.vin = vin.trim();
     if (make !== undefined) updateData.make = make;
@@ -134,9 +137,9 @@ export async function PUT(
     if (reorderPoint !== undefined) updateData.reorderPoint = reorderPoint;
     if (status !== undefined) updateData.status = status;
 
-    const updated = await db.update(vehicles)
+    const updated = await db.update(vehicle)
       .set(updateData)
-      .where(eq(vehicles.id, parseInt(id)))
+      .where(eq(vehicle.id, Number(id)))
       .returning();
 
     if (updated.length === 0) {
@@ -180,8 +183,8 @@ export async function DELETE(
 
     // Check if vehicle exists
     const existingVehicle = await db.select()
-      .from(vehicles)
-      .where(eq(vehicles.id, parseInt(id)))
+      .from(vehicle)
+      .where(eq(vehicle.id, Number(id)))
       .limit(1);
 
     if (existingVehicle.length === 0) {
@@ -190,8 +193,8 @@ export async function DELETE(
       }, { status: 404 });
     }
 
-    const deleted = await db.delete(vehicles)
-      .where(eq(vehicles.id, parseInt(id)))
+    const deleted = await db.delete(vehicle)
+      .where(eq(vehicle.id, Number(id)))
       .returning();
 
     if (deleted.length === 0) {

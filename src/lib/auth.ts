@@ -23,6 +23,16 @@ export const auth = betterAuth({
         provider: "sqlite",
         schema: schema,
     }),
+    user: {
+        additionalFields: {
+            role: {
+                type: "string",
+                required: false,
+                defaultValue: "user",
+                input: false, // Don't allow user to set their own role
+            },
+        },
+    },
     emailAndPassword: {
         enabled: true,
         autoSignIn: false, // Disable auto sign-in to force verification

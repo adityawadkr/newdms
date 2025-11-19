@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { vehicles } from '@/db/schema';
+import { vehicle } from '@/db/schema';
 import { eq, like, and, or, desc, count } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
@@ -13,26 +13,26 @@ export async function GET(request: NextRequest) {
     const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '50')));
     const offset = (page - 1) * pageSize;
 
-    let query: any = db.select().from(vehicles);
-    let countQuery: any = db.select({ count: count() }).from(vehicles);
+    let query: any = db.select().from(vehicle);
+    let countQuery: any = db.select({ count: count() }).from(vehicle);
 
     const conditions = [];
 
     if (q) {
       const searchCondition = or(
-        like(vehicles.make, `%${q}%`),
-        like(vehicles.model, `%${q}%`),
-        like(vehicles.vin, `%${q}%`)
+        like(vehicle.make, `%${q}%`),
+        like(vehicle.model, `%${q}%`),
+        like(vehicle.vin, `%${q}%`)
       );
       conditions.push(searchCondition);
     }
 
     if (category) {
-      conditions.push(eq(vehicles.category, category));
+      conditions.push(eq(vehicle.category, category));
     }
 
     if (status) {
-      conditions.push(eq(vehicles.status, status));
+      conditions.push(eq(vehicle.status, status));
     }
 
     if (conditions.length > 0) {
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     const [data, totalResult] = await Promise.all([
-      query.orderBy(desc(vehicles.createdAt)).limit(pageSize).offset(offset),
+      query.orderBy(desc(vehicle.createdAt)).limit(pageSize).offset(offset),
       countQuery
     ]);
 
@@ -144,15 +144,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for VIN uniqueness
-    const existingVehicle = await db.select().from(vehicles).where(eq(vehicles.vin, vin.trim())).limit(1);
-    if (existingVehicle.length > 0) {
+    const allVehicles = await db.select().from(vehicle).where(eq(vehicle.vin, vin.trim())).limit(1);
+    if (allVehicles.length > 0) {
       return NextResponse.json({
         error: 'VIN must be unique'
       }, { status: 400 });
     }
 
-    const now = Date.now();
-    const newVehicle = await db.insert(vehicles).values({
+    const now = new Date();
+    const newVehicle = await db.insert(vehicle).values({
       vin: vin.trim(),
       make: make.trim(),
       model: model.trim(),

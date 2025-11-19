@@ -1,10 +1,10 @@
 import { db } from '@/db';
-import { vehicles } from '@/db/schema';
+import { vehicle } from '@/db/schema';
 
 async function main() {
     const now = Date.now();
     const oneDay = 24 * 60 * 60 * 1000;
-    
+
     const sampleVehicles = [
         {
             vin: 'MA3ERC66S00450671',
@@ -17,8 +17,8 @@ async function main() {
             stock: 12,
             reorderPoint: 5,
             status: 'in_stock',
-            createdAt: now - (15 * oneDay),
-            updatedAt: now - (2 * oneDay),
+            createdAt: new Date(now - (15 * oneDay)),
+            updatedAt: new Date(now - (2 * oneDay)),
         },
         {
             vin: 'MA3EWE81S00389654',
@@ -31,8 +31,8 @@ async function main() {
             stock: 10,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (20 * oneDay),
-            updatedAt: now - (3 * oneDay),
+            createdAt: new Date(now - (20 * oneDay)),
+            updatedAt: new Date(now - (3 * oneDay)),
         },
         {
             vin: 'MAT650031K1D08234',
@@ -45,8 +45,8 @@ async function main() {
             stock: 8,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (10 * oneDay),
-            updatedAt: now - (1 * oneDay),
+            createdAt: new Date(now - (10 * oneDay)),
+            updatedAt: new Date(now - (1 * oneDay)),
         },
         {
             vin: 'MAT630046K1C12567',
@@ -59,8 +59,8 @@ async function main() {
             stock: 6,
             reorderPoint: 3,
             status: 'in_stock',
-            createdAt: now - (12 * oneDay),
-            updatedAt: now - (1 * oneDay),
+            createdAt: new Date(now - (12 * oneDay)),
+            updatedAt: new Date(now - (1 * oneDay)),
         },
         {
             vin: 'MA1TA2GM5K1234567',
@@ -73,8 +73,8 @@ async function main() {
             stock: 5,
             reorderPoint: 3,
             status: 'in_stock',
-            createdAt: now - (18 * oneDay),
-            updatedAt: now - (2 * oneDay),
+            createdAt: new Date(now - (18 * oneDay)),
+            updatedAt: new Date(now - (2 * oneDay)),
         },
         {
             vin: 'MA1TU8CL8K1098765',
@@ -87,8 +87,8 @@ async function main() {
             stock: 7,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (22 * oneDay),
-            updatedAt: now - (4 * oneDay),
+            createdAt: new Date(now - (22 * oneDay)),
+            updatedAt: new Date(now - (4 * oneDay)),
         },
         {
             vin: 'MALH0811DJK234890',
@@ -101,8 +101,8 @@ async function main() {
             stock: 9,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (14 * oneDay),
-            updatedAt: now - (2 * oneDay),
+            createdAt: new Date(now - (14 * oneDay)),
+            updatedAt: new Date(now - (2 * oneDay)),
         },
         {
             vin: 'MALH8911DJK567234',
@@ -115,8 +115,8 @@ async function main() {
             stock: 11,
             reorderPoint: 5,
             status: 'in_stock',
-            createdAt: now - (16 * oneDay),
-            updatedAt: now - (2 * oneDay),
+            createdAt: new Date(now - (16 * oneDay)),
+            updatedAt: new Date(now - (2 * oneDay)),
         },
         {
             vin: 'MA1KC2GMHK2345678',
@@ -129,8 +129,8 @@ async function main() {
             stock: 8,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (25 * oneDay),
-            updatedAt: now - (5 * oneDay),
+            createdAt: new Date(now - (25 * oneDay)),
+            updatedAt: new Date(now - (5 * oneDay)),
         },
         {
             vin: 'MA3FEB71S00234567',
@@ -143,8 +143,8 @@ async function main() {
             stock: 10,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (19 * oneDay),
-            updatedAt: now - (3 * oneDay),
+            createdAt: new Date(now - (19 * oneDay)),
+            updatedAt: new Date(now - (3 * oneDay)),
         },
         {
             vin: 'MALHH411DJK890123',
@@ -157,8 +157,8 @@ async function main() {
             stock: 13,
             reorderPoint: 5,
             status: 'in_stock',
-            createdAt: now - (11 * oneDay),
-            updatedAt: now - (1 * oneDay),
+            createdAt: new Date(now - (11 * oneDay)),
+            updatedAt: new Date(now - (1 * oneDay)),
         },
         {
             vin: 'MAT621039K1D45678',
@@ -171,8 +171,8 @@ async function main() {
             stock: 9,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (17 * oneDay),
-            updatedAt: now - (2 * oneDay),
+            createdAt: new Date(now - (17 * oneDay)),
+            updatedAt: new Date(now - (2 * oneDay)),
         },
         {
             vin: 'MALHR811DJK345123',
@@ -185,8 +185,8 @@ async function main() {
             stock: 7,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (21 * oneDay),
-            updatedAt: now - (3 * oneDay),
+            createdAt: new Date(now - (21 * oneDay)),
+            updatedAt: new Date(now - (3 * oneDay)),
         },
         {
             vin: 'MALA5311DJK789456',
@@ -199,8 +199,8 @@ async function main() {
             stock: 8,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (13 * oneDay),
-            updatedAt: now - (2 * oneDay),
+            createdAt: new Date(now - (13 * oneDay)),
+            updatedAt: new Date(now - (2 * oneDay)),
         },
         {
             vin: 'MA1PA2GM5K1567890',
@@ -213,8 +213,8 @@ async function main() {
             stock: 6,
             reorderPoint: 3,
             status: 'reserved',
-            createdAt: now - (9 * oneDay),
-            updatedAt: now - (1 * oneDay),
+            createdAt: new Date(now - (9 * oneDay)),
+            updatedAt: new Date(now - (1 * oneDay)),
         },
         {
             vin: 'MAT640052K1D78901',
@@ -227,8 +227,8 @@ async function main() {
             stock: 5,
             reorderPoint: 3,
             status: 'in_stock',
-            createdAt: now - (24 * oneDay),
-            updatedAt: now - (4 * oneDay),
+            createdAt: new Date(now - (24 * oneDay)),
+            updatedAt: new Date(now - (4 * oneDay)),
         },
         {
             vin: 'MA1KC8GMHK2678901',
@@ -241,8 +241,8 @@ async function main() {
             stock: 10,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (15 * oneDay),
-            updatedAt: now - (2 * oneDay),
+            createdAt: new Date(now - (15 * oneDay)),
+            updatedAt: new Date(now - (2 * oneDay)),
         },
         {
             vin: 'MA3ERC66S00789012',
@@ -255,8 +255,8 @@ async function main() {
             stock: 8,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (28 * oneDay),
-            updatedAt: now - (5 * oneDay),
+            createdAt: new Date(now - (28 * oneDay)),
+            updatedAt: new Date(now - (5 * oneDay)),
         },
         {
             vin: 'MA1TA5GM5K1890123',
@@ -269,8 +269,8 @@ async function main() {
             stock: 7,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (26 * oneDay),
-            updatedAt: now - (4 * oneDay),
+            createdAt: new Date(now - (26 * oneDay)),
+            updatedAt: new Date(now - (4 * oneDay)),
         },
         {
             vin: 'MALHD711DJK901234',
@@ -283,8 +283,8 @@ async function main() {
             stock: 6,
             reorderPoint: 3,
             status: 'in_stock',
-            createdAt: now - (23 * oneDay),
-            updatedAt: now - (4 * oneDay),
+            createdAt: new Date(now - (23 * oneDay)),
+            updatedAt: new Date(now - (4 * oneDay)),
         },
         {
             vin: 'MAT610058K1D12345',
@@ -297,8 +297,8 @@ async function main() {
             stock: 14,
             reorderPoint: 5,
             status: 'in_stock',
-            createdAt: now - (12 * oneDay),
-            updatedAt: now - (1 * oneDay),
+            createdAt: new Date(now - (12 * oneDay)),
+            updatedAt: new Date(now - (1 * oneDay)),
         },
         {
             vin: 'MA3ERD76S00345678',
@@ -311,8 +311,8 @@ async function main() {
             stock: 12,
             reorderPoint: 5,
             status: 'in_stock',
-            createdAt: now - (18 * oneDay),
-            updatedAt: now - (3 * oneDay),
+            createdAt: new Date(now - (18 * oneDay)),
+            updatedAt: new Date(now - (3 * oneDay)),
         },
         {
             vin: 'MALA6211DJK456789',
@@ -325,8 +325,8 @@ async function main() {
             stock: 11,
             reorderPoint: 5,
             status: 'in_stock',
-            createdAt: now - (20 * oneDay),
-            updatedAt: now - (3 * oneDay),
+            createdAt: new Date(now - (20 * oneDay)),
+            updatedAt: new Date(now - (3 * oneDay)),
         },
         {
             vin: 'MA1KC5GMHK2789012',
@@ -339,8 +339,8 @@ async function main() {
             stock: 7,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (16 * oneDay),
-            updatedAt: now - (2 * oneDay),
+            createdAt: new Date(now - (16 * oneDay)),
+            updatedAt: new Date(now - (2 * oneDay)),
         },
         {
             vin: 'MAT625063K1D23456',
@@ -353,8 +353,8 @@ async function main() {
             stock: 4,
             reorderPoint: 3,
             status: 'reserved',
-            createdAt: now - (8 * oneDay),
-            updatedAt: now - (1 * oneDay),
+            createdAt: new Date(now - (8 * oneDay)),
+            updatedAt: new Date(now - (1 * oneDay)),
         },
         {
             vin: 'MALHL611DJK567890',
@@ -367,8 +367,8 @@ async function main() {
             stock: 13,
             reorderPoint: 5,
             status: 'in_stock',
-            createdAt: now - (14 * oneDay),
-            updatedAt: now - (2 * oneDay),
+            createdAt: new Date(now - (14 * oneDay)),
+            updatedAt: new Date(now - (2 * oneDay)),
         },
         {
             vin: 'MA3EWA91S00678901',
@@ -381,8 +381,8 @@ async function main() {
             stock: 8,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (27 * oneDay),
-            updatedAt: now - (5 * oneDay),
+            createdAt: new Date(now - (27 * oneDay)),
+            updatedAt: new Date(now - (5 * oneDay)),
         },
         {
             vin: 'MA1TB2GM5K1012345',
@@ -395,8 +395,8 @@ async function main() {
             stock: 9,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (19 * oneDay),
-            updatedAt: now - (3 * oneDay),
+            createdAt: new Date(now - (19 * oneDay)),
+            updatedAt: new Date(now - (3 * oneDay)),
         },
         {
             vin: 'MAT638047K1D34567',
@@ -409,8 +409,8 @@ async function main() {
             stock: 5,
             reorderPoint: 3,
             status: 'in_stock',
-            createdAt: now - (10 * oneDay),
-            updatedAt: now - (1 * oneDay),
+            createdAt: new Date(now - (10 * oneDay)),
+            updatedAt: new Date(now - (1 * oneDay)),
         },
         {
             vin: 'MALHA911DJK890123',
@@ -423,13 +423,13 @@ async function main() {
             stock: 7,
             reorderPoint: 4,
             status: 'in_stock',
-            createdAt: now - (21 * oneDay),
-            updatedAt: now - (3 * oneDay),
+            createdAt: new Date(now - (21 * oneDay)),
+            updatedAt: new Date(now - (3 * oneDay)),
         },
     ];
 
-    await db.insert(vehicles).values(sampleVehicles);
-    
+    await db.insert(vehicle).values(sampleVehicles);
+
     console.log('✅ Vehicles seeder completed successfully');
 }
 
