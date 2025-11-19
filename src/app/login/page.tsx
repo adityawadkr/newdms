@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { authClient } from "@/lib/auth-client"
+import { toast } from "sonner"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -23,23 +25,22 @@ export default function LoginPage() {
     const email = formData.get("email") as string
     const password = formData.get("password") as string
 
-    // Mock authentication - replace with actual auth logic
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      
-      if (email && password) {
-        // Store mock token
-        localStorage.setItem("bearer_token", "mock-token-" + Date.now())
+    await authClient.signIn.email({
+      email,
+      password,
+    }, {
+      onRequest: () => {
+        setLoading(true)
+      },
+      onSuccess: () => {
+        toast.success("Signed in successfully")
         router.push("/dashboard")
-      } else {
-        setError("Invalid credentials")
-      }
-    } catch (err) {
-      setError("Login failed. Please try again.")
-    } finally {
-      setLoading(false)
-    }
+      },
+      onError: (ctx) => {
+        setError(ctx.error.message)
+        setLoading(false)
+      },
+    })
   }
 
   return (
@@ -67,7 +68,12 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
               <Input
                 id="password"
                 name="password"

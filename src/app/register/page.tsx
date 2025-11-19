@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { authClient } from "@/lib/auth-client"
+import { toast } from "sonner"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -31,23 +33,23 @@ export default function RegisterPage() {
       return
     }
 
-    // Mock registration - replace with actual auth logic
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      
-      if (name && email && password) {
-        // Store mock token
-        localStorage.setItem("bearer_token", "mock-token-" + Date.now())
-        router.push("/dashboard")
-      } else {
-        setError("Registration failed")
-      }
-    } catch (err) {
-      setError("Registration failed. Please try again.")
-    } finally {
-      setLoading(false)
-    }
+    await authClient.signUp.email({
+      email,
+      password,
+      name,
+    }, {
+      onRequest: () => {
+        setLoading(true)
+      },
+      onSuccess: () => {
+        toast.success("Account created successfully. Please check your email for verification.")
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`)
+      },
+      onError: (ctx) => {
+        setError(ctx.error.message)
+        setLoading(false)
+      },
+    })
   }
 
   return (
