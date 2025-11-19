@@ -10,8 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { authClient } from "@/lib/auth-client"
 import { toast } from "sonner"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
+import { Suspense } from "react"
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const email = searchParams.get("email")
@@ -43,7 +44,7 @@ export default function VerifyEmailPage() {
         setError(null)
 
         await authClient.emailOtp.verifyEmail({
-            email,
+            email: email as string,
             otp,
         }, {
             onRequest: () => {
@@ -104,5 +105,13 @@ export default function VerifyEmailPage() {
                 </CardContent>
             </Card>
         </div>
+    )
+}
+
+export default function VerifyEmailPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <VerifyEmailContent />
+        </Suspense>
     )
 }
