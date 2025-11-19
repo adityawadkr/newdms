@@ -8,12 +8,7 @@ import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartToo
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis, PieChart, Pie, Cell } from "recharts"
 import { useEffect, useMemo, useState } from "react"
 
-const kpis = [
-  { title: "Leads", value: 736, desc: "+11.01%", trend: "up" as const },
-  { title: "Test Drive Schedules", value: 36, desc: "-0.03%", trend: "down" as const },
-  { title: "Inventory", value: 156, desc: "+15.03%", trend: "up" as const },
-  { title: "Service Requests", value: 231, desc: "+6.08%", trend: "up" as const },
-]
+
 
 const salesData = [
   { month: "Jan", leads: 120, sales: 80 },
@@ -88,13 +83,36 @@ export default function Dashboard() {
     localStorage.setItem('theme', next)
   }
 
+  const [stats, setStats] = useState<{
+    totalUsers: number
+    totalVehicles: number
+    lowStockVehicles: number
+    recentVehicles: any[]
+  } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/dashboard/stats')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) setStats(data)
+      })
+      .catch(err => console.error(err))
+  }, [])
+
+  const kpis = [
+    { title: "Total Users", value: stats?.totalUsers ?? "...", desc: "Active team members", trend: "up" as const },
+    { title: "Total Vehicles", value: stats?.totalVehicles ?? "...", desc: "In inventory", trend: "up" as const },
+    { title: "Low Stock Alerts", value: stats?.lowStockVehicles ?? "...", desc: "Vehicles below reorder point", trend: (stats?.lowStockVehicles || 0) > 0 ? "down" : "up" as const },
+    { title: "Service Requests", value: 231, desc: "+6.08%", trend: "up" as const },
+  ]
+
   return (
     <>
       <div className="flex h-14 items-center gap-2 border-b px-4">
         <SidebarTrigger />
         <div className="text-sm text-muted-foreground">Dashboards</div>
         <div className="mx-2 text-muted-foreground">/</div>
-        <div className="font-semibold">Default</div>
+        <div className="font-semibold">Overview</div>
         <div className="ml-auto flex items-center gap-2">
           <div className="relative hidden md:block">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
