@@ -77,7 +77,9 @@ export const auth = betterAuth({
     },
     trustedOrigins: [
         "http://localhost:3000",
-        "https://newdms.netlify.app", // Add your Netlify URL here
-        process.env.BETTER_AUTH_URL || "" // Fallback to env var
+        "http://127.0.0.1:3000",
+        "https://newdms.netlify.app",
+        process.env.BETTER_AUTH_URL || "",
+        process.env.NEXT_PUBLIC_APP_URL || ""
     ].filter(Boolean), // Remove empty strings
 });
