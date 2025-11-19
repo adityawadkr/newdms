@@ -75,4 +75,9 @@ export const auth = betterAuth({
             maxAge: 5 * 60, // 5 minutes
         },
     },
+    trustedOrigins: [
+        "http://localhost:3000",
+        "https://newdms.netlify.app", // Add your Netlify URL here
+        process.env.BETTER_AUTH_URL || "" // Fallback to env var
+    ].filter(Boolean), // Remove empty strings
 });

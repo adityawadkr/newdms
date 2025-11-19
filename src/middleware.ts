@@ -46,7 +46,12 @@ export async function middleware(request: NextRequest) {
     try {
         // We need to query the session and user to get the role
         // Note: In Edge Runtime, make sure your DB client is compatible (LibSQL via HTTP is)
-        const result = await db.select({
+        // Add a timeout to the DB call to prevent hanging
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("DB Timeout")), 5000)
+        );
+
+        const dbPromise = db.select({
             user: user,
             session: session
         })
@@ -54,6 +59,8 @@ export async function middleware(request: NextRequest) {
             .innerJoin(user, eq(session.userId, user.id))
             .where(eq(session.token, token))
             .get();
+
+        const result = await Promise.race([dbPromise, timeoutPromise]) as any;
 
         if (!result || result.session.expiresAt < new Date()) {
             // Invalid or expired session
