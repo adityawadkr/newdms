@@ -137,7 +137,7 @@ export default function LandingUI() {
                             dealer management through sensual purity and absolute data
                             precision.
                         </p>
-                        <Link href="/dashboard">
+                        <Link href="/login">
                             <button className="bg-white text-black px-12 py-4 rounded-full font-sans font-semibold text-sm transition-transform duration-300 hover:scale-105 reveal-text translate-y-10 opacity-0">
                                 Explore Platform
                             </button>
