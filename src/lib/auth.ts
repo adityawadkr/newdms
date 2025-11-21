@@ -75,4 +75,16 @@ export const auth = betterAuth({
             maxAge: 5 * 60, // 5 minutes
         },
     },
+    trustedOrigins: [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://192.168.1.5:3000",
+        "http://192.168.1.5:3001",
+        "https://newdms.netlify.app",
+        process.env.BETTER_AUTH_URL || "",
+        process.env.NEXT_PUBLIC_APP_URL || ""
+    ].filter(Boolean), // Remove empty strings
 });
+
