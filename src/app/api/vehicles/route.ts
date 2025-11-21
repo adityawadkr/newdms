@@ -2,22 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { vehicle } from '@/db/schema';
 import { eq, like, and, or, desc, count } from 'drizzle-orm';
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 
 export async function GET(request: NextRequest) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
     const { searchParams } = new URL(request.url);
     const q = searchParams.get('q');
     const category = searchParams.get('category');
     const status = searchParams.get('status');
+    const location = searchParams.get('location');
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
     const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '50')));
     const offset = (page - 1) * pageSize;
@@ -42,6 +34,10 @@ export async function GET(request: NextRequest) {
 
     if (status) {
       conditions.push(eq(vehicle.status, status));
+    }
+
+    if (location) {
+      conditions.push(eq(vehicle.location, location));
     }
 
     if (conditions.length > 0) {
@@ -76,12 +72,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
   try {
     const body = await request.json();
     const {
@@ -94,7 +84,10 @@ export async function POST(request: NextRequest) {
       price,
       stock,
       reorderPoint,
-      status
+      status,
+      location,
+      daysInStock,
+      costPrice
     } = body;
 
     // Validation
@@ -166,20 +159,22 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const now = new Date();
     const newVehicle = await db.insert(vehicle).values({
-      vin: vin.trim(),
-      make: make.trim(),
-      model: model.trim(),
-      year,
-      category: category.trim(),
-      color: color.trim(),
-      price,
-      stock,
-      reorderPoint,
-      status,
-      createdAt: now,
-      updatedAt: now
+      vin,
+      make,
+      model,
+      year: Number(year),
+      category: category || 'Sedan',
+      color: color || 'Black',
+      price: Number(price),
+      stock: Number(stock) || 0,
+      reorderPoint: Number(reorderPoint) || 0,
+      status: status || 'in_stock',
+      location: location || 'Stockyard',
+      daysInStock: Number(daysInStock) || 0,
+      costPrice: Number(costPrice) || 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
     }).returning();
 
     return NextResponse.json({

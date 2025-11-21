@@ -29,7 +29,7 @@ export const auth = betterAuth({
                 type: "string",
                 required: false,
                 defaultValue: "user",
-                input: false, // Don't allow user to set their own role
+                input: true, // Allow user to choose their role
             },
         },
     },

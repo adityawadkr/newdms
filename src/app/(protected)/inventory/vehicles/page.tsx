@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Pencil, Search, AlertTriangle, Filter } from "lucide-react"
+import { Plus, Pencil, Search, AlertTriangle, Filter, Store, Warehouse, ArrowRightLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast } from "sonner"
 
 // Mock vehicle type
 type Vehicle = {
@@ -24,6 +25,9 @@ type Vehicle = {
   stock: number
   reorderPoint: number
   status: "in_stock" | "reserved" | "sold"
+  location: "Stockyard" | "Showroom"
+  daysInStock: number
+  costPrice: number
 }
 
 export default function VehicleInventoryPage() {
@@ -31,14 +35,11 @@ export default function VehicleInventoryPage() {
   const [query, setQuery] = React.useState("")
   const [category, setCategory] = React.useState<string>("all")
   const [status, setStatus] = React.useState<string>("all")
+  const [location, setLocation] = React.useState<string>("all")
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Vehicle | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-
-  // Pagination state
-  const [page, setPage] = React.useState(1)
-  const [totalPages, setTotalPages] = React.useState(1)
 
   React.useEffect(() => {
     let ignore = false
@@ -50,19 +51,15 @@ export default function VehicleInventoryPage() {
         if (query.trim()) params.set("q", query.trim())
         if (category !== "all") params.set("category", category)
         if (status !== "all") params.set("status", status)
-        params.set("page", page.toString())
-        params.set("pageSize", "10") // Default page size
-
-        const res = await fetch(`/api/vehicles?${params.toString()}`)
+        if (location !== "all") params.set("location", location)
+        const res = await fetch(`/api/vehicles?${params.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("bearer_token") || ""}`,
+          },
+        })
         const json = await res.json()
         if (!res.ok) throw new Error(json?.error || "Failed to load vehicles")
-
-        if (!ignore) {
-          setVehicles(json.data || [])
-          if (json.meta) {
-            setTotalPages(json.meta.totalPages)
-          }
-        }
+        if (!ignore) setVehicles(json.data || [])
       } catch (e: any) {
         if (!ignore) setError(e.message || "Error loading vehicles")
       } finally {
@@ -71,12 +68,7 @@ export default function VehicleInventoryPage() {
     }
     load()
     return () => { ignore = true }
-  }, [query, category, status, page])
-
-  // Reset page when filters change
-  React.useEffect(() => {
-    setPage(1)
-  }, [query, category, status])
+  }, [query, category, status, location])
 
   function onSave(formData: FormData) {
     const body = {
@@ -90,7 +82,11 @@ export default function VehicleInventoryPage() {
       stock: Number(formData.get("stock") || 0),
       reorderPoint: Number(formData.get("reorderPoint") || 0),
       status: String(formData.get("status") || "in_stock") as Vehicle["status"],
+      location: String(formData.get("location") || "Stockyard") as Vehicle["location"],
+      costPrice: Number(formData.get("costPrice") || 0),
     }
+
+    const token = localStorage.getItem("bearer_token") || ""
 
     const run = async () => {
       try {
@@ -102,7 +98,7 @@ export default function VehicleInventoryPage() {
           setVehicles(optimistic)
           const res = await fetch(`/api/vehicles/${editing.id}`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify(body),
           })
           if (!res.ok) {
@@ -110,297 +106,278 @@ export default function VehicleInventoryPage() {
             const j = await res.json().catch(() => ({}))
             throw new Error(j.error || "Failed to update vehicle")
           }
+          toast.success("Vehicle updated")
         } else {
-          const res = await fetch(`/api/vehicles`, {
+          const res = await fetch("/api/vehicles", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify(body),
           })
-          const j = await res.json()
-          if (!res.ok) throw new Error(j.error || "Failed to create vehicle")
-          // Refresh list to get correct sort order/pagination
-          // For simplicity, just reload current page or prepend if on page 1
-          if (page === 1) {
-            setVehicles((prev) => [j.data, ...prev])
-          }
+          const json = await res.json()
+          if (!res.ok) throw new Error(json.error || "Failed to create vehicle")
+          setVehicles([json.data, ...vehicles])
+          toast.success("Vehicle created")
         }
         setEditing(null)
         setDialogOpen(false)
       } catch (e: any) {
         setError(e.message || "Save failed")
+        toast.error(e.message || "Save failed")
       }
     }
-    void run()
+    run()
   }
 
-  async function onDelete(id: number) {
-    if (!confirm("Are you sure you want to delete this vehicle?")) return
+  async function handleMoveStock(vehicle: Vehicle) {
+    const newLocation = vehicle.location === "Stockyard" ? "Showroom" : "Stockyard"
+    const token = localStorage.getItem("bearer_token") || ""
+
+    // Optimistic
+    const prev = vehicles
+    setVehicles(prev.map(v => v.id === vehicle.id ? { ...v, location: newLocation } : v))
 
     try {
-      const res = await fetch(`/api/vehicles/${id}`, {
-        method: "DELETE",
+      const res = await fetch(`/api/vehicles/${vehicle.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ location: newLocation }),
       })
-      if (!res.ok) {
-        const j = await res.json()
-        throw new Error(j.error || "Failed to delete vehicle")
-      }
-      setVehicles((prev) => prev.filter((v) => v.id !== id))
-    } catch (e: any) {
-      setError(e.message || "Delete failed")
+      if (!res.ok) throw new Error("Failed to move stock")
+      toast.success(`Moved to ${newLocation}`)
+    } catch (error) {
+      setVehicles(prev)
+      toast.error("Failed to move stock")
     }
   }
 
-  const lowStock = (v: Vehicle) => v.stock <= v.reorderPoint
-
   return (
-    <div className="space-y-4 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="text-xl font-semibold">Vehicle Inventory</div>
-        <div className="ml-auto flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 size-4 -translate-y-1/2 opacity-60" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search VIN, make, model, year"
-              className="pl-8 w-64"
-            />
-          </div>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger aria-label="Category Filter" className="w-[140px]">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="SUV">SUV</SelectItem>
-              <SelectItem value="Sedan">Sedan</SelectItem>
-              <SelectItem value="Hatchback">Hatchback</SelectItem>
-              <SelectItem value="EV">EV</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger aria-label="Status Filter" className="w-[140px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="in_stock">In Stock</SelectItem>
-              <SelectItem value="reserved">Reserved</SelectItem>
-              <SelectItem value="sold">Sold</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => { setEditing(null) }}>
-                <Plus className="mr-2 size-4" /> Add Vehicle
-              </Button>
-            </DialogTrigger>
-            <VehicleFormDialog
-              vehicle={editing}
-              onSubmit={onSave}
-            />
-          </Dialog>
+    <div className="p-8 space-y-8 bg-zinc-50/50 min-h-screen">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Vehicle List</h1>
+          <p className="text-zinc-500 mt-1">Manage detailed inventory records.</p>
         </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => setEditing(null)} className="bg-zinc-900 text-white hover:bg-zinc-800">
+              <Plus className="mr-2 h-4 w-4" /> Add Vehicle
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{editing ? "Edit Vehicle" : "Add New Vehicle"}</DialogTitle>
+            </DialogHeader>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                onSave(new FormData(e.currentTarget))
+              }}
+              className="grid gap-4 py-4"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>VIN</Label>
+                  <Input name="vin" defaultValue={editing?.vin} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Make</Label>
+                  <Input name="make" defaultValue={editing?.make} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Model</Label>
+                  <Input name="model" defaultValue={editing?.model} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Year</Label>
+                  <Input name="year" type="number" defaultValue={editing?.year || 2024} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select name="category" defaultValue={editing?.category || "SUV"}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SUV">SUV</SelectItem>
+                      <SelectItem value="Sedan">Sedan</SelectItem>
+                      <SelectItem value="Hatchback">Hatchback</SelectItem>
+                      <SelectItem value="Luxury">Luxury</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Color</Label>
+                  <Input name="color" defaultValue={editing?.color} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Selling Price</Label>
+                  <Input name="price" type="number" defaultValue={editing?.price} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cost Price</Label>
+                  <Input name="costPrice" type="number" defaultValue={editing?.costPrice} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Stock</Label>
+                  <Input name="stock" type="number" defaultValue={editing?.stock || 1} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Location</Label>
+                  <Select name="location" defaultValue={editing?.location || "Stockyard"}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Stockyard">Stockyard</SelectItem>
+                      <SelectItem value="Showroom">Showroom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select name="status" defaultValue={editing?.status || "in_stock"}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in_stock">In Stock</SelectItem>
+                      <SelectItem value="reserved">Reserved</SelectItem>
+                      <SelectItem value="sold">Sold</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                <Button type="submit">Save Changes</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {loading && (
-        <Card className="border-dashed">
-          <CardHeader>
-            <CardTitle>Loading vehicles…</CardTitle>
-            <CardDescription>Please wait while we fetch data.</CardDescription>
-          </CardHeader>
-        </Card>
-      )}
+      <div className="flex gap-4 items-center bg-white p-4 rounded-lg border shadow-sm">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
+          <Input
+            placeholder="Search by VIN, Make, or Model..."
+            className="pl-9"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        <Select value={category} onValueChange={setCategory}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="SUV">SUV</SelectItem>
+            <SelectItem value="Sedan">Sedan</SelectItem>
+            <SelectItem value="Hatchback">Hatchback</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={location} onValueChange={setLocation}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Location" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Locations</SelectItem>
+            <SelectItem value="Stockyard">Stockyard</SelectItem>
+            <SelectItem value="Showroom">Showroom</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="in_stock">In Stock</SelectItem>
+            <SelectItem value="reserved">Reserved</SelectItem>
+            <SelectItem value="sold">Sold</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {error && (
-        <Card className="border-destructive/30">
-          <CardHeader>
-            <CardTitle className="text-destructive">Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-        </Card>
+        <div className="bg-red-50 text-red-600 p-4 rounded-md flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4" />
+          {error}
+        </div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="size-4" />
-            Results
-          </CardTitle>
-          <CardDescription>Page {page} of {totalPages}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
+      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-zinc-50/50">
+              <TableHead>Vehicle</TableHead>
+              <TableHead>VIN</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Location</TableHead>
+              <TableHead>Aging</TableHead>
+              <TableHead>Price</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
               <TableRow>
-                <TableHead>VIN</TableHead>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead className="text-center">Stock</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableCell colSpan={8} className="text-center py-8 text-zinc-500">Loading...</TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {vehicles.map((v) => (
-                <TableRow key={v.id} className={lowStock(v) ? "bg-amber-50 dark:bg-amber-950/20" : ""}>
-                  <TableCell className="font-mono text-xs">{v.vin}</TableCell>
-                  <TableCell>{v.year} {v.make} {v.model}</TableCell>
-                  <TableCell>{v.category}</TableCell>
-                  <TableCell className="text-right">₹{v.price.toLocaleString('en-IN')}</TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      {v.stock}
-                      {lowStock(v) && (
-                        <Badge variant="destructive" className="gap-1">
-                          <AlertTriangle className="size-3" /> Reorder
-                        </Badge>
-                      )}
+            ) : vehicles.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-zinc-500">No vehicles found.</TableCell>
+              </TableRow>
+            ) : (
+              vehicles.map((vehicle) => (
+                <TableRow key={vehicle.id}>
+                  <TableCell>
+                    <div className="font-medium">{vehicle.year} {vehicle.make} {vehicle.model}</div>
+                    <div className="text-xs text-zinc-500">{vehicle.color}</div>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">{vehicle.vin}</TableCell>
+                  <TableCell>{vehicle.category}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="gap-1">
+                      {vehicle.location === "Showroom" ? <Store className="h-3 w-3" /> : <Warehouse className="h-3 w-3" />}
+                      {vehicle.location}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className={`flex items-center gap-1 font-medium ${vehicle.daysInStock > 90 ? "text-red-600" :
+                        vehicle.daysInStock > 60 ? "text-amber-600" : "text-emerald-600"
+                      }`}>
+                      {vehicle.daysInStock} Days
                     </div>
                   </TableCell>
                   <TableCell>
-                    {v.status === "in_stock" && <Badge>In Stock</Badge>}
-                    {v.status === "reserved" && <Badge variant="secondary">Reserved</Badge>}
-                    {v.status === "sold" && <Badge variant="outline">Sold</Badge>}
+                    <div className="font-medium">₹{(vehicle.price / 100000).toFixed(2)} L</div>
+                    <div className="text-xs text-zinc-500">Cost: ₹{(vehicle.costPrice / 100000).toFixed(2)} L</div>
                   </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button variant="ghost" size="sm" onClick={() => { setEditing(v); setDialogOpen(true) }}>
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => onDelete(v.id)}>
-                      <span className="sr-only">Delete</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
-                    </Button>
+                  <TableCell>
+                    <Badge variant="outline" className={
+                      vehicle.status === "in_stock" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                        vehicle.status === "reserved" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                          "bg-zinc-100 text-zinc-700 border-zinc-200"
+                    }>
+                      {vehicle.status.replace("_", " ")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleMoveStock(vehicle)} title="Move Stock">
+                        <ArrowRightLeft className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => {
+                        setEditing(vehicle)
+                        setDialogOpen(true)
+                      }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))}
-              {vehicles.length === 0 && !loading && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No vehicles found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          {/* Pagination Controls */}
-          <div className="flex items-center justify-end space-x-2 py-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1 || loading}
-            >
-              Previous
-            </Button>
-            <div className="text-sm text-muted-foreground">
-              Page {page} of {totalPages || 1}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages || loading}
-            >
-              Next
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        {/* Dialog content is rendered via the trigger logic above, but we need to ensure the edit dialog works too */}
-        {/* Actually, the dialog is rendered inside the map loop in the original code, which is bad practice. 
-             I moved it out to the top level in this replacement. 
-             Wait, I need to make sure the Dialog component is correctly placed.
-             In the replacement above, I put one Dialog at the top for "Add" and reused it for "Edit".
-             Let's verify the Edit button logic.
-             The Edit button sets `editing` state and `dialogOpen` state.
-             The Dialog component uses `editing` state to populate the form.
-             This is correct.
-         */}
-      </Dialog>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
-  )
-}
-
-function VehicleFormDialog({ vehicle, onSubmit }: { vehicle: Vehicle | null; onSubmit: (fd: FormData) => void }) {
-  return (
-    <DialogContent className="sm:max-w-2xl">
-      <DialogHeader>
-        <DialogTitle>{vehicle ? "Edit Vehicle" : "Add Vehicle"}</DialogTitle>
-      </DialogHeader>
-      <form
-        action={(fd) => {
-          onSubmit(fd)
-        }}
-        className="grid grid-cols-1 gap-3 md:grid-cols-2"
-      >
-        <div>
-          <Label htmlFor="vin">VIN</Label>
-          <Input name="vin" id="vin" required defaultValue={vehicle?.vin} />
-        </div>
-        <div>
-          <Label htmlFor="make">Make</Label>
-          <Input name="make" id="make" required defaultValue={vehicle?.make} placeholder="e.g., Maruti Suzuki, Tata, Mahindra" />
-        </div>
-        <div>
-          <Label htmlFor="model">Model</Label>
-          <Input name="model" id="model" required defaultValue={vehicle?.model} placeholder="e.g., Swift, Nexon, XUV700" />
-        </div>
-        <div>
-          <Label htmlFor="year">Year</Label>
-          <Input name="year" id="year" type="number" required defaultValue={vehicle?.year ?? 2024} />
-        </div>
-        <div>
-          <Label>Category</Label>
-          <Select name="category" defaultValue={vehicle?.category ?? "SUV"}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="SUV">SUV</SelectItem>
-              <SelectItem value="Sedan">Sedan</SelectItem>
-              <SelectItem value="Hatchback">Hatchback</SelectItem>
-              <SelectItem value="EV">EV</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="color">Color</Label>
-          <Input name="color" id="color" defaultValue={vehicle?.color} />
-        </div>
-        <div>
-          <Label htmlFor="price">Price (₹)</Label>
-          <Input name="price" id="price" type="number" step="10000" defaultValue={vehicle?.price ?? 0} />
-        </div>
-        <div>
-          <Label htmlFor="stock">Stock</Label>
-          <Input name="stock" id="stock" type="number" defaultValue={vehicle?.stock ?? 0} />
-        </div>
-        <div>
-          <Label htmlFor="reorderPoint">Reorder Point</Label>
-          <Input name="reorderPoint" id="reorderPoint" type="number" defaultValue={vehicle?.reorderPoint ?? 0} />
-        </div>
-        <div>
-          <Label>Status</Label>
-          <Select name="status" defaultValue={vehicle?.status ?? "in_stock"}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="in_stock">In Stock</SelectItem>
-              <SelectItem value="reserved">Reserved</SelectItem>
-              <SelectItem value="sold">Sold</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="md:col-span-2 mt-2 flex justify-end gap-2">
-          <Button type="submit">Save</Button>
-        </div>
-      </form>
-    </DialogContent>
   )
 }

@@ -4,43 +4,32 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { authClient } from "@/lib/auth-client"
+import { ROLES } from "@/lib/roles"
 import { Loader2 } from "lucide-react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useState, useEffect, Suspense } from "react"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { toast } from "sonner"
 
-function RegisterForm() {
+export default function RegisterPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const token = searchParams.get("token")
-
   const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [role, setRole] = useState("user")
   const [loading, setLoading] = useState(false)
-  const [inviteData, setInviteData] = useState<{ email: string, role: string } | null>(null)
-  const [checkingInvite, setCheckingInvite] = useState(!!token)
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    if (token) {
-      checkInvite()
-    }
-  }, [token])
-
-  async function checkInvite() {
-    try {
-      const res = await fetch(`/api/auth/check-invite?token=${token}`)
-      if (!res.ok) throw new Error("Invalid or expired invitation")
-      const data = await res.json()
-      setInviteData(data)
-    } catch (e: any) {
-      setError(e.message)
-    } finally {
-      setCheckingInvite(false)
-    }
+  const ROLE_LABELS: Record<string, string> = {
+    admin: "Administrator",
+    sales: "Sales Representative",
+    service: "Service Advisor",
+    technician: "Technician",
+    user: "Standard User",
+    guest_admin: "Guest Admin",
   }
 
   const handleSubmit = async () => {
@@ -49,42 +38,22 @@ function RegisterForm() {
       return
     }
 
-    if (!token && !inviteData) {
-      // Public registration is disabled, but we can leave a message or redirect
-      setError("Public registration is disabled. Please use an invite link.")
-      return
-    }
-
     setLoading(true)
     setError("")
 
     try {
       await authClient.signUp.email({
-        email: inviteData!.email,
+        email,
         password,
         name,
-        // We pass the token to the backend to verify and assign role
-        // But better-auth might not support custom fields in signUp directly without plugin
-        // So we might need a custom hook or just trust the flow if we verify token again on backend
-        // Actually, we should probably use a custom API to complete registration if we want to be secure
-        // OR, we can just use the standard signUp and update the role in a hook.
-        // For simplicity, let's assume we pass the token as a custom header or field if supported.
-        // Wait, better-auth allows additional fields.
-        // Let's pass the token in `image` field temporarily or just handle it via a custom route?
-        // Better approach: Use a custom API route to create the user with the specific role.
-      }, {
+        role, // Pass the selected role
+      } as any, {
         onRequest: () => {
           setLoading(true)
         },
-        onSuccess: async () => {
-          // After successful signup, we need to mark invite as accepted and assign role
-          // We can do this by calling a custom API
-          await fetch("/api/auth/complete-invite", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token })
-          })
-          router.push("/dashboard")
+        onSuccess: () => {
+          toast.success("Account created! Please verify your email.")
+          router.push(`/verify-email?email=${encodeURIComponent(email)}`)
         },
         onError: (ctx) => {
           setError(ctx.error.message)
@@ -97,49 +66,13 @@ function RegisterForm() {
     }
   }
 
-  if (checkingInvite) {
-    return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>
-  }
-
-  if (token && error) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-destructive">Invitation Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Link href="/login"><Button variant="outline">Back to Login</Button></Link>
-          </CardFooter>
-        </Card>
-      </div>
-    )
-  }
-
-  if (!token) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Registration Closed</CardTitle>
-            <CardDescription>Public registration is currently disabled. Please contact your administrator for an invitation.</CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Link href="/login"><Button className="w-full">Back to Login</Button></Link>
-          </CardFooter>
-        </Card>
-      </div>
-    )
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Accept Invitation</CardTitle>
+          <CardTitle>Create Account</CardTitle>
           <CardDescription>
-            Create your account for <strong>{inviteData?.email}</strong>
+            Sign up for Dealership DMS
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -151,6 +84,31 @@ function RegisterForm() {
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(ROLES).map((roleValue) => (
+                  <SelectItem key={roleValue} value={roleValue}>
+                    {ROLE_LABELS[roleValue] || roleValue}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
@@ -186,13 +144,5 @@ function RegisterForm() {
         </CardFooter>
       </Card>
     </div>
-  )
-}
-
-export default function RegisterPage() {
-  return (
-    <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>}>
-      <RegisterForm />
-    </Suspense>
   )
 }

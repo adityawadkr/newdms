@@ -1,168 +1,185 @@
 "use client"
 
-import * as React from "react"
-import { CalendarPlus, CalendarClock } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
+import { Calendar, Clock, User, Car, Wrench, Plus } from "lucide-react"
 
- type Appointment = {
-  id: string
+interface Appointment {
+  id: number
   customer: string
   vehicle: string
   date: string
   serviceType: string
-  status: "scheduled" | "in_progress" | "completed"
+  status: string
 }
 
-const initial: Appointment[] = [
-  { id: "a1", customer: "Amit Patel", vehicle: "Maruti Suzuki Baleno", date: "2025-10-03 09:30", serviceType: "Periodic Service", status: "scheduled" },
-]
-
 export default function ServiceAppointmentsPage() {
-  const [rows, setRows] = React.useState<Appointment[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState<string | null>(null)
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [jobCardDialogOpen, setJobCardDialogOpen] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
 
-  React.useEffect(() => {
-    let ignore = false
-    const load = async () => {
-      try {
-        setError(null)
-        const token = typeof window !== "undefined" ? localStorage.getItem("bearer_token") : null
-        const res = await fetch("/api/appointments?limit=50", {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data?.error || "Failed to load appointments")
-        if (!ignore) {
-          const mapped: Appointment[] = (data?.data || []).map((a: any) => ({
-            id: String(a.id),
-            customer: a.customer,
-            vehicle: a.vehicle,
-            date: a.date,
-            serviceType: a.serviceType,
-            status: a.status,
-          }))
-          setRows(mapped)
-        }
-      } catch (e: any) {
-        if (!ignore) setError(e.message || "Error loading appointments")
-      } finally {
-        if (!ignore) setLoading(false)
-      }
-    }
-    load()
-    return () => { ignore = true }
+  useEffect(() => {
+    fetchAppointments()
   }, [])
 
-  async function onSave(fd: FormData) {
-    const localDate = String(fd.get("date") || "") // from datetime-local
-    const iso = localDate ? new Date(localDate).toISOString() : ""
-    const payload = {
-      customer: String(fd.get("customer") || "").trim(),
-      vehicle: String(fd.get("vehicle") || "").trim(),
-      date: iso,
-      serviceType: String(fd.get("serviceType") || "").trim(),
-      status: String(fd.get("status") || "scheduled") as Appointment["status"],
+  async function fetchAppointments() {
+    try {
+      const res = await fetch("/api/service/appointments")
+      const json = await res.json()
+      if (json.data) setAppointments(json.data)
+    } catch (error) {
+      console.error("Failed to fetch appointments", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function createAppointment(formData: FormData) {
+    const body = {
+      customer: formData.get("customer"),
+      vehicle: formData.get("vehicle"),
+      date: formData.get("date"),
+      serviceType: formData.get("serviceType"),
     }
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("bearer_token") : null
-    const res = await fetch("/api/appointments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(payload),
-    })
-    const data = await res.json()
-    if (!res.ok) {
-      setError(data?.error || "Failed to create appointment")
-      return
+    try {
+      const res = await fetch("/api/service/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error("Failed to create appointment")
+
+      toast.success("Appointment scheduled")
+      setDialogOpen(false)
+      fetchAppointments()
+    } catch (error) {
+      toast.error("Failed to schedule appointment")
     }
-    const a = data.data
-    const next: Appointment = {
-      id: String(a.id),
-      customer: a.customer,
-      vehicle: a.vehicle,
-      date: a.date,
-      serviceType: a.serviceType,
-      status: a.status,
+  }
+
+  async function createJobCard(formData: FormData) {
+    if (!selectedAppointment) return
+
+    const body = {
+      appointmentId: selectedAppointment.id,
+      technician: formData.get("technician"),
+      notes: formData.get("notes"),
     }
-    setRows((p) => [next, ...p])
+
+    try {
+      const res = await fetch("/api/service/job-cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error("Failed to create job card")
+
+      toast.success("Job Card created")
+      setJobCardDialogOpen(false)
+      fetchAppointments() // Refresh to see status update
+    } catch (error) {
+      toast.error("Failed to create job card")
+    }
   }
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="flex items-center gap-2">
-        <div className="text-xl font-semibold flex items-center gap-2"><CalendarClock className="size-5"/> Service Appointments</div>
+    <div className="space-y-6 p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Service Appointments</h1>
+          <p className="text-muted-foreground">Manage appointments and assign job cards.</p>
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> New Appointment
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Schedule Service</DialogTitle>
+            </DialogHeader>
+            <form action={createAppointment} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="customer">Customer Name</Label>
+                <Input id="customer" name="customer" required placeholder="John Doe" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vehicle">Vehicle</Label>
+                <Input id="vehicle" name="vehicle" required placeholder="MH12 AB 1234 - Swift" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date</Label>
+                  <Input id="date" name="date" type="date" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="serviceType">Service Type</Label>
+                  <Select name="serviceType" defaultValue="General Service">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="General Service">General Service</SelectItem>
+                      <SelectItem value="Oil Change">Oil Change</SelectItem>
+                      <SelectItem value="Repair">Repair</SelectItem>
+                      <SelectItem value="Inspection">Inspection</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button type="submit" className="w-full">Schedule</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{appointments.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Job Cards</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{appointments.filter(a => a.status === "Scheduled").length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+            <Wrench className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{appointments.filter(a => a.status === "In Progress").length}</div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Schedule Appointment</CardTitle>
-          <CardDescription>Create a new service booking</CardDescription>
+          <CardTitle>Appointments List</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={onSave} className="grid gap-3 md:grid-cols-5">
-            <div>
-              <Label htmlFor="customer">Customer</Label>
-              <Input id="customer" name="customer" required />
-            </div>
-            <div className="md:col-span-2">
-              <Label htmlFor="vehicle">Vehicle</Label>
-              <Input id="vehicle" name="vehicle" placeholder="e.g., Tata Nexon, Hyundai Creta" required />
-            </div>
-            <div>
-              <Label htmlFor="date">Date & Time</Label>
-              <Input id="date" name="date" type="datetime-local" required />
-            </div>
-            <div>
-              <Label>Service Type</Label>
-              <Select name="serviceType" defaultValue="Periodic Service">
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Periodic Service">Periodic Service</SelectItem>
-                  <SelectItem value="General">General</SelectItem>
-                  <SelectItem value="Diagnostics">Diagnostics</SelectItem>
-                  <SelectItem value="Repair">Repair</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Status</Label>
-              <Select name="status" defaultValue="scheduled">
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="md:col-span-5 flex justify-end">
-              <Button type="submit"><CalendarPlus className="mr-2 size-4"/> Save</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Appointments</CardTitle>
-          <CardDescription>Today's and upcoming schedule</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading && <div className="text-sm text-muted-foreground">Loading appointments...</div>}
-          {error && <div className="text-sm text-destructive">{error}</div>}
           <Table>
             <TableHeader>
               <TableRow>
@@ -171,18 +188,68 @@ export default function ServiceAppointmentsPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>{r.customer}</TableCell>
-                  <TableCell>{r.vehicle}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.date}</TableCell>
-                  <TableCell>{r.serviceType}</TableCell>
-                  <TableCell className="capitalize">{r.status.replace("_", " ")}</TableCell>
+              {appointments.map((apt) => (
+                <TableRow key={apt.id}>
+                  <TableCell className="font-medium">{apt.customer}</TableCell>
+                  <TableCell>{apt.vehicle}</TableCell>
+                  <TableCell>{apt.date}</TableCell>
+                  <TableCell>{apt.serviceType}</TableCell>
+                  <TableCell>
+                    <Badge variant={apt.status === "Scheduled" ? "outline" : apt.status === "In Progress" ? "secondary" : "default"}>
+                      {apt.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {apt.status === "Scheduled" && (
+                      <Dialog open={jobCardDialogOpen && selectedAppointment?.id === apt.id} onOpenChange={(open) => {
+                        setJobCardDialogOpen(open)
+                        if (open) setSelectedAppointment(apt)
+                      }}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="default">Create Job Card</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Assign Job Card</DialogTitle>
+                            <CardDescription>Assign a technician to {apt.vehicle}</CardDescription>
+                          </DialogHeader>
+                          <form action={createJobCard} className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="technician">Technician</Label>
+                              <Select name="technician" required>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select Technician" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Rajesh Kumar">Rajesh Kumar</SelectItem>
+                                  <SelectItem value="Suresh Patil">Suresh Patil</SelectItem>
+                                  <SelectItem value="Amit Singh">Amit Singh</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="notes">Initial Notes</Label>
+                              <Input id="notes" name="notes" placeholder="Customer complaints..." />
+                            </div>
+                            <Button type="submit" className="w-full">Create & Assign</Button>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
+              {appointments.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    No appointments found.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

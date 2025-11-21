@@ -61,11 +61,7 @@ export async function POST(req: Request) {
         })
 
         // Send email
-        // Determine base URL from headers to ensure correct domain in production
-        const host = req.headers.get("host")
-        const protocol = req.headers.get("x-forwarded-proto") || "https"
-        const baseUrl = `${protocol}://${host}`
-        const inviteLink = `${baseUrl}/register?token=${token}`
+        const inviteLink = `${process.env.BETTER_AUTH_URL || "http://localhost:3000"}/register?token=${token}`
 
         await transporter.sendMail({
             from: process.env.EMAIL_FROM || "noreply@example.com",

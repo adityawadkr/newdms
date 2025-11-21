@@ -29,12 +29,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Update user role and mark email as verified
+    // Update user role
     await db.update(user)
-        .set({
-            role: invite.role,
-            emailVerified: true
-        })
+        .set({ role: invite.role })
         .where(eq(user.id, session.user.id))
 
     // Update invitation status

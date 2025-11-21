@@ -1,246 +1,220 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Users, Clock, Calendar, DollarSign, UserPlus, FileText, CheckCircle2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
-import { authClient } from "@/lib/auth-client"
-import { Role, ROLES } from "@/lib/roles"
-import { Trash2, Mail, Shield, Users } from "lucide-react"
 
-type User = {
-    id: string
-    name: string
-    email: string
-    role: Role
-    createdAt: string
+interface LeaveRequest {
+  id: number
+  employeeName: string
+  type: string
+  status: string
+  createdAt: string
+  startDate: string
+  endDate: string
 }
 
-type Invitation = {
-    id: string
-    email: string
-    role: Role
-    status: "pending" | "accepted"
-    token: string
-    createdAt: string
-}
+export default function HRDashboard() {
+  const [stats, setStats] = useState({
+    totalEmployees: 0,
+    presentToday: 0,
+    onLeave: 0,
+    pendingLeaves: 0
+  })
+  const [recentActivity, setRecentActivity] = useState<LeaveRequest[]>([])
 
-export default function HRPage() {
-    const [users, setUsers] = useState<User[]>([])
-    const [invitations, setInvitations] = useState<Invitation[]>([])
-    const [loading, setLoading] = useState(true)
-    const [inviteOpen, setInviteOpen] = useState(false)
-    const [inviteEmail, setInviteEmail] = useState("")
-    const [inviteRole, setInviteRole] = useState<Role>("user")
-    const [sending, setSending] = useState(false)
+  useEffect(() => {
+    // Fetch stats from APIs
+    async function fetchData() {
+      try {
+        const today = new Date().toISOString().split('T')[0]
 
-    const { data: session } = authClient.useSession()
+        const [empRes, attRes, leaveRes, pendingLeaveRes] = await Promise.all([
+          fetch("/api/hr/employees"),
+          fetch(`/api/hr/attendance?date=${today}`),
+          fetch("/api/hr/leaves?status=Approved"),
+          fetch("/api/hr/leaves?status=Pending")
+        ])
 
-    useEffect(() => {
-        loadData()
-    }, [])
+        const empData = await empRes.json()
+        const attData = await attRes.json()
+        const approvedLeavesData = await leaveRes.json()
+        const pendingLeavesData = await pendingLeaveRes.json()
 
-    async function loadData() {
-        try {
-            setLoading(true)
-            const [usersRes, invitesRes] = await Promise.all([
-                fetch("/api/hr/users"),
-                fetch("/api/hr/invitations")
-            ])
+        // Calculate "On Leave" for today
+        const onLeaveCount = (approvedLeavesData.data || []).filter((l: LeaveRequest) =>
+          l.startDate <= today && l.endDate >= today
+        ).length
 
-            if (usersRes.ok) {
-                const data = await usersRes.json()
-                setUsers(data.users)
-            }
+        setStats({
+          totalEmployees: empData.data?.length || 0,
+          presentToday: attData.data?.length || 0,
+          onLeave: onLeaveCount,
+          pendingLeaves: pendingLeavesData.data?.length || 0
+        })
 
-            if (invitesRes.ok) {
-                const data = await invitesRes.json()
-                setInvitations(data.invitations)
-            }
-        } catch (e) {
-            console.error("Failed to load HR data", e)
-        } finally {
-            setLoading(false)
-        }
+        // Combine recent leaves for activity feed
+        const allLeaves = [...(pendingLeavesData.data || []), ...(approvedLeavesData.data || [])]
+        // Sort by ID desc (proxy for recency) or createdAt if available
+        const sortedLeaves = allLeaves.sort((a: LeaveRequest, b: LeaveRequest) => b.id - a.id).slice(0, 5)
+        setRecentActivity(sortedLeaves)
+
+      } catch (error) {
+        console.error("Failed to fetch dashboard data", error)
+      }
     }
+    fetchData()
+  }, [])
 
-    async function sendInvite() {
-        try {
-            setSending(true)
-            const res = await fetch("/api/hr/invitations", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: inviteEmail, role: inviteRole })
-            })
-
-            if (!res.ok) throw new Error("Failed to send invite")
-
-            setInviteOpen(false)
-            setInviteEmail("")
-            loadData()
-        } catch (e) {
-            alert("Failed to send invitation")
-        } finally {
-            setSending(false)
-        }
-    }
-
-    async function deleteUser(id: string) {
-        if (!confirm("Are you sure you want to delete this user?")) return
-
-        try {
-            const res = await fetch(`/api/hr/users/${id}`, { method: "DELETE" })
-            if (res.ok) loadData()
-        } catch (e) {
-            console.error(e)
-        }
-    }
-
-    if ((session?.user as any)?.role !== "admin" && (session?.user as any)?.role !== "guest_admin") {
-        return <div className="p-8 text-center text-muted-foreground">Access Denied. Admin only.</div>
-    }
-
-    return (
-        <div className="p-6 space-y-8">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">HR & Team Management</h1>
-                    <p className="text-muted-foreground">Manage users, roles, and invitations.</p>
-                </div>
-                <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <Mail className="mr-2 size-4" /> Invite User
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Invite New Team Member</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label>Email Address</Label>
-                                <Input
-                                    placeholder="colleague@example.com"
-                                    value={inviteEmail}
-                                    onChange={(e) => setInviteEmail(e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Role</Label>
-                                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as Role)}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {Object.values(ROLES).map((role) => (
-                                            <SelectItem key={role} value={role}>
-                                                {role.charAt(0).toUpperCase() + role.slice(1)}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <Button className="w-full" onClick={sendInvite} disabled={sending}>
-                                {sending ? "Sending..." : "Send Invitation"}
-                            </Button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Users className="size-5" /> Team Members
-                        </CardTitle>
-                        <CardDescription>Active users in the system</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Role</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {users.map((user) => (
-                                    <TableRow key={user.id}>
-                                        <TableCell>
-                                            <div className="font-medium">{user.name}</div>
-                                            <div className="text-xs text-muted-foreground">{user.email}</div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline">{user.role}</Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-destructive hover:text-destructive"
-                                                onClick={() => deleteUser(user.id)}
-                                                disabled={(session?.user as any)?.role === "guest_admin"}
-                                            >
-                                                <Trash2 className="size-4" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Mail className="size-5" /> Pending Invitations
-                        </CardTitle>
-                        <CardDescription>Invites sent but not yet accepted</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead>Role</TableHead>
-                                    <TableHead>Status</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {invitations.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                                            No pending invitations
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                                {invitations.map((invite) => (
-                                    <TableRow key={invite.id}>
-                                        <TableCell>{invite.email}</TableCell>
-                                        <TableCell>
-                                            <Badge variant="secondary">{invite.role}</Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">
-                                                {invite.status}
-                                            </Badge>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            </div>
+  return (
+    <div className="p-8 space-y-8 bg-zinc-50/50 min-h-screen">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">HR Dashboard</h1>
+          <p className="text-zinc-500 mt-1">Overview of your workforce and daily operations.</p>
         </div>
-    )
+        <div className="flex gap-3">
+          <Link href="/hr/employees">
+            <Button className="bg-zinc-900 text-white hover:bg-zinc-800">
+              <UserPlus className="mr-2 h-4 w-4" /> Add Employee
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-zinc-200 shadow-sm hover:shadow-md transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-zinc-500">Total Employees</CardTitle>
+            <Users className="h-4 w-4 text-zinc-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-zinc-900">{stats.totalEmployees}</div>
+            <p className="text-xs text-zinc-500 mt-1">Active workforce</p>
+          </CardContent>
+        </Card>
+        <Card className="border-zinc-200 shadow-sm hover:shadow-md transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-zinc-500">Present Today</CardTitle>
+            <Clock className="h-4 w-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-zinc-900">{stats.presentToday}</div>
+            <p className="text-xs text-zinc-500 mt-1">Checked in so far</p>
+          </CardContent>
+        </Card>
+        <Card className="border-zinc-200 shadow-sm hover:shadow-md transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-zinc-500">On Leave</CardTitle>
+            <Calendar className="h-4 w-4 text-rose-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-zinc-900">{stats.onLeave}</div>
+            <p className="text-xs text-zinc-500 mt-1">Approved for today</p>
+          </CardContent>
+        </Card>
+        <Card className="border-zinc-200 shadow-sm hover:shadow-md transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-zinc-500">Pending Requests</CardTitle>
+            <AlertCircle className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-zinc-900">{stats.pendingLeaves}</div>
+            <p className="text-xs text-zinc-500 mt-1">Requires approval</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4 border-zinc-200 shadow-sm">
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4">
+            <Link href="/hr/attendance" className="block">
+              <div className="flex items-center p-4 border rounded-xl hover:bg-zinc-50 transition-colors cursor-pointer group">
+                <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="font-semibold text-zinc-900">Attendance</h3>
+                  <p className="text-sm text-zinc-500">View daily logs</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/hr/leaves" className="block">
+              <div className="flex items-center p-4 border rounded-xl hover:bg-zinc-50 transition-colors cursor-pointer group">
+                <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
+                  <Calendar className="h-5 w-5" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="font-semibold text-zinc-900">Leaves</h3>
+                  <p className="text-sm text-zinc-500">Approve requests</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/hr/payroll" className="block">
+              <div className="flex items-center p-4 border rounded-xl hover:bg-zinc-50 transition-colors cursor-pointer group">
+                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                  <DollarSign className="h-5 w-5" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="font-semibold text-zinc-900">Payroll</h3>
+                  <p className="text-sm text-zinc-500">Generate slips</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/hr/employees" className="block">
+              <div className="flex items-center p-4 border rounded-xl hover:bg-zinc-50 transition-colors cursor-pointer group">
+                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
+                  <Users className="h-5 w-5" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="font-semibold text-zinc-900">Directory</h3>
+                  <p className="text-sm text-zinc-500">Manage staff</p>
+                </div>
+              </div>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-3 border-zinc-200 shadow-sm">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentActivity.length === 0 ? (
+                <p className="text-sm text-zinc-500">No recent activity.</p>
+              ) : (
+                recentActivity.map((activity) => (
+                  <div key={activity.id} className="flex items-start space-x-4 pb-4 border-b last:border-0 last:pb-0">
+                    <div className="h-8 w-8 rounded-full bg-zinc-100 flex items-center justify-center mt-0.5">
+                      <FileText className="h-4 w-4 text-zinc-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-zinc-900">
+                        {activity.status === "Pending" ? "New Leave Request" : `Leave ${activity.status}`}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {activity.employeeName} - {activity.type}
+                      </p>
+                      <div className="mt-1">
+                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-5">
+                          {activity.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
 }

@@ -57,11 +57,11 @@ export function Navigation() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-1">
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               className="text-xl font-bold text-foreground hover:text-foreground/80 transition-colors"
             >
-              Orchids
+              Dealership
             </Link>
           </div>
           <div className="flex items-center gap-2 overflow-x-auto">
@@ -69,11 +69,10 @@ export function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap border border-transparent ${
-                  pathname === item.href
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap border border-transparent ${pathname === item.href
                     ? "bg-muted text-foreground border-border/60"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent hover:border-border/60"
-                }`}
+                  }`}
               >
                 {item.label}
               </Link>

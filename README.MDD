@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS | VISION ICONIC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Manrope:wght@200;300;400;500;600&display=swap');
+
+        :root {
+            --bg: #020202;
+            --accent-red: #D90429; /* Vision Red */
+            --text-main: #FFFFFF;
+            --text-muted: #8D99AE;
+            --font-serif: 'Playfair Display', serif;
+            --font-sans: 'Manrope', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            overflow-x: hidden;
+            cursor: default;
+        }
+
+        /* --- LUXURY CURSOR --- */
+        #cursor {
+            position: fixed; top: 0; left: 0;
+            width: 12px; height: 12px;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s ease-out;
+            mix-blend-mode: exclusion;
+        }
+        #cursor.active {
+            transform: translate(-50%, -50%) scale(6);
+            background: var(--accent-red);
+            mix-blend-mode: normal;
+            opacity: 0.2;
+        }
+
+        /* --- CANVAS & LAYOUT --- */
+        canvas {
+            position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 0;
+        }
+
+        .ui-layer {
+            position: relative; z-index: 10;
+            width: 100%;
+            pointer-events: none;
+        }
+        .pointer-events-auto { pointer-events: auto; }
+
+        /* --- TYPOGRAPHY (The "Iconic" Look) --- */
+        .serif-display {
+            font-family: var(--font-serif);
+            font-size: clamp(3rem, 8vw, 9rem);
+            line-height: 1;
+            letter-spacing: -0.01em;
+            font-weight: 400;
+        }
+        
+        .section-title {
+            font-family: var(--font-serif);
+            font-size: 3rem;
+            margin-bottom: 2rem;
+        }
+
+        .overline {
+            font-family: var(--font-sans);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--accent-red);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        /* --- COMPONENTS --- */
+        .nav-link {
+            position: relative;
+            padding-bottom: 4px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+        .nav-link:hover { opacity: 1; }
+        .nav-link::after {
+            content: ''; position: absolute; bottom: 0; left: 0; width: 0%; height: 1px; background: white; transition: width 0.3s;
+        }
+        .nav-link:hover::after { width: 100%; }
+
+        .btn-vision {
+            background: white;
+            color: black;
+            padding: 1rem 3rem;
+            border-radius: 100px;
+            font-family: var(--font-sans);
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-vision:hover {
+            transform: scale(1.05);
+        }
+
+        /* Glass Cards for Modules */
+        .module-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 3rem;
+            transition: all 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .module-card:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(255,255,255,0.3);
+        }
+        .module-card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 2px; height: 0%;
+            background: var(--accent-red);
+            transition: height 0.5s ease;
+        }
+        .module-card:hover::before { height: 100%; }
+
+        /* DMS Mockup container */
+        .dms-mockup {
+            background: #0a0a0a;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 20px 100px rgba(0,0,0,0.8);
+            border: 1px solid #222;
+            position: relative;
+        }
+
+        /* --- LOADER --- */
+        #preloader {
+            position: fixed; inset: 0; background: #000; z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 1.2s ease-out;
+        }
+        .logo-spin {
+            width: 50px; height: 50px;
+            border: 1px solid #333; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px;
+            animation: spin 10s linear infinite;
+        }
+        .star-icon { width: 1px; height: 30px; background: white; position: absolute; }
+        .star-icon:nth-child(2) { transform: rotate(60deg); }
+        .star-icon:nth-child(3) { transform: rotate(-60deg); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="cursor"></div>
+
+    <!-- PRELOADER -->
+    <div id="preloader">
+        <div class="logo-spin">
+            <div class="star-icon"></div>
+            <div class="star-icon"></div>
+            <div class="star-icon"></div>
+        </div>
+        <div class="font-serif italic text-gray-500 tracking-widest text-sm">Vision Iconic</div>
+    </div>
+
+    <!-- 3D CANVAS -->
+    <div id="canvas-container"></div>
+
+    <!-- CONTENT -->
+    <div class="ui-layer">
+        
+        <!-- Header -->
+        <nav class="w-full p-10 flex justify-between items-center fixed top-0 z-50 pointer-events-auto mix-blend-difference">
+            <div class="flex items-center gap-3">
+                <div class="w-6 h-6 border border-white rounded-full flex items-center justify-center">
+                    <div class="w-[1px] h-3 bg-white"></div>
+                </div>
+                <span class="font-sans font-bold tracking-widest text-xs">NEXUS</span>
+            </div>
+            <div class="hidden md:flex gap-12">
+                <a href="#vision" class="nav-link">Vision</a>
+                <a href="#intelligence" class="nav-link">Intelligence</a>
+                <a href="#exclusive" class="nav-link">Exclusive</a>
+            </div>
+            <a href="#" class="nav-link">Login</a>
+        </nav>
+
+        <!-- HERO SECTION -->
+        <section id="vision" class="h-screen w-full flex items-center px-10 md:px-24 relative">
+            <div class="z-10 pointer-events-auto">
+                <h1 class="serif-display mb-8 reveal-text">
+                    VISION<br>
+                    <span class="italic text-gray-400">ICONIC.</span>
+                </h1>
+                <p class="font-sans text-gray-400 max-w-md text-sm leading-relaxed mb-10 reveal-text">
+                    The operating system for the automotive avant-garde. 
+                    Redefining dealer management through sensual purity and absolute data precision.
+                </p>
+                <button class="btn-vision reveal-text">
+                    Explore Platform
+                </button>
+            </div>
+
+            <!-- Red Flow Overlay Graphic (Simulating the reference) -->
+            <!-- The 3D ribbon will handle the motion, this is just scroll guidance -->
+            <div class="absolute bottom-12 right-12 flex flex-col items-end gap-4 opacity-50 mix-blend-difference">
+                <span class="font-sans text-xs tracking-widest uppercase">Scroll</span>
+                <div class="h-16 w-[1px] bg-white"></div>
+            </div>
+        </section>
+
+        <!-- SPACER for Cinematics -->
+        <div style="height: 30vh;"></div>
+
+        <!-- FEATURES GRID -->
+        <section id="intelligence" class="px-10 md:px-24 py-32 bg-[#020202] relative z-20 border-t border-white/5">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-16">
+                <div class="col-span-1 md:col-span-4">
+                    <span class="overline">The Intelligence</span>
+                    <h2 class="section-title text-white">Engineered<br><span class="italic text-gray-500">Beyond.</span></h2>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        NEXUS is not merely software; it is the nervous system of your enterprise. 
+                        Seamlessly connecting sales velocity with service precision.
+                    </p>
+                </div>
+                <div class="col-span-1 md:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Card 1 -->
+                    <div class="module-card group pointer-events-auto cursor-pointer">
+                        <div class="text-3xl mb-4 font-serif italic text-gray-600 group-hover:text-white transition-colors">01.</div>
+                        <h3 class="text-xl font-medium mb-2">Inventory</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">Real-time asset tracking with 3D visualization and predictive aging analysis.</p>
+                    </div>
+                    <!-- Card 2 -->
+                    <div class="module-card group pointer-events-auto cursor-pointer">
+                        <div class="text-3xl mb-4 font-serif italic text-gray-600 group-hover:text-white transition-colors">02.</div>
+                        <h3 class="text-xl font-medium mb-2">Experience</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">Clienteling tools that anticipate customer desires before they are spoken.</p>
+                    </div>
+                    <!-- Card 3 -->
+                    <div class="module-card group pointer-events-auto cursor-pointer">
+                        <div class="text-3xl mb-4 font-serif italic text-gray-600 group-hover:text-white transition-colors">03.</div>
+                        <h3 class="text-xl font-medium mb-2">Fixed Ops</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">Automated bay scheduling and AI-driven parts inventory management.</p>
+                    </div>
+                    <!-- Card 4 -->
+                    <div class="module-card group pointer-events-auto cursor-pointer">
+                        <div class="text-3xl mb-4 font-serif italic text-gray-600 group-hover:text-white transition-colors">04.</div>
+                        <h3 class="text-xl font-medium mb-2">Analytics</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">Financial clarity with zero latency. Global reporting at a glance.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- INTERFACE SHOWCASE -->
+        <section class="px-10 md:px-24 py-32 relative z-20">
+            <div class="dms-mockup w-full h-[80vh] pointer-events-auto">
+                <!-- Functional DMS Dashboard Layout -->
+                <div class="w-full h-full bg-[#050505] flex flex-col font-sans text-gray-400">
+                    <!-- Header -->
+                    <div class="h-14 border-b border-white/10 flex items-center justify-between px-6 bg-[#0a0a0a]">
+                        <div class="flex items-center gap-4">
+                            <div class="flex gap-2">
+                                <div class="w-3 h-3 rounded-full bg-[#333]"></div>
+                                <div class="w-3 h-3 rounded-full bg-[#333]"></div>
+                            </div>
+                            <span class="text-xs tracking-widest text-gray-500">NEXUS OS 2.0</span>
+                        </div>
+                        <div class="flex gap-8 text-[10px] tracking-wider items-center">
+                            <span class="cursor-pointer hover:text-white">SEARCH</span>
+                            <span class="cursor-pointer hover:text-white">NOTIFICATIONS <span class="text-[var(--accent-red)]">(3)</span></span>
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded-full bg-white/10"></div>
+                                <span class="text-white">ADMIN</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 flex overflow-hidden">
+                        <!-- Sidebar -->
+                        <div class="w-16 md:w-64 border-r border-white/10 flex flex-col py-8 bg-[#080808]">
+                            <div class="px-8 mb-8 hidden md:block">
+                                <div class="text-[10px] uppercase tracking-widest text-gray-600 mb-4">Modules</div>
+                                <div class="flex flex-col gap-4 text-xs font-medium">
+                                    <div class="text-white flex justify-between cursor-pointer group">Dashboard <span class="w-1.5 h-1.5 bg-[var(--accent-red)] rounded-full self-center shadow-[0_0_10px_var(--accent-red)]"></span></div>
+                                    <div class="hover:text-white transition-colors cursor-pointer">Inventory Management</div>
+                                    <div class="hover:text-white transition-colors cursor-pointer">CRM / Leads</div>
+                                    <div class="hover:text-white transition-colors cursor-pointer">Fixed Operations</div>
+                                    <div class="hover:text-white transition-colors cursor-pointer">Financials</div>
+                                </div>
+                            </div>
+                            <div class="mt-auto px-8 hidden md:block">
+                                 <div class="text-[10px] uppercase tracking-widest text-gray-600 mb-4">System</div>
+                                 <div class="text-xs hover:text-white transition-colors cursor-pointer mb-2">Settings</div>
+                                 <div class="text-xs hover:text-white transition-colors cursor-pointer">Audit Log</div>
+                            </div>
+                        </div>
+
+                        <!-- Main Content -->
+                        <div class="flex-1 p-8 overflow-y-auto custom-scrollbar bg-gradient-to-br from-[#0a0a0a] to-black">
+                            <!-- KPI Row -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                <div class="bg-white/5 border border-white/5 p-5 rounded-sm hover:bg-white/10 transition-colors">
+                                    <div class="text-[10px] uppercase tracking-widest text-gray-500 mb-2">Total Revenue (Mtd)</div>
+                                    <div class="text-3xl text-white font-serif">$4.2M <span class="text-sm text-green-500 font-sans ml-2 font-medium">▲ 12%</span></div>
+                                </div>
+                                <div class="bg-white/5 border border-white/5 p-5 rounded-sm hover:bg-white/10 transition-colors">
+                                    <div class="text-[10px] uppercase tracking-widest text-gray-500 mb-2">Active Inventory</div>
+                                    <div class="text-3xl text-white font-serif">248 <span class="text-sm text-gray-500 font-sans ml-2">Units</span></div>
+                                </div>
+                                <div class="bg-white/5 border border-white/5 p-5 rounded-sm hover:bg-white/10 transition-colors">
+                                    <div class="text-[10px] uppercase tracking-widest text-gray-500 mb-2">Pending Leads</div>
+                                    <div class="text-3xl text-white font-serif">86 <span class="text-sm text-[var(--accent-red)] font-sans ml-2 font-medium">Urgent</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Split View -->
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+                                <!-- Inventory Table -->
+                                <div class="col-span-2 bg-white/5 border border-white/5 rounded-sm flex flex-col">
+                                    <div class="p-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+                                        <span class="text-xs text-white tracking-wide font-medium">LIVE INVENTORY FEED</span>
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-[var(--accent-red)] animate-pulse"></span>
+                                            <span class="text-[10px] text-[var(--accent-red)]">LIVE</span>
+                                        </div>
+                                    </div>
+                                    <div class="p-2">
+                                        <!-- Table Header -->
+                                        <div class="grid grid-cols-4 text-[10px] uppercase text-gray-600 px-4 py-3 font-medium tracking-wider">
+                                            <div class="col-span-2">Vehicle</div>
+                                            <div>Status</div>
+                                            <div class="text-right">Price</div>
+                                        </div>
+                                        <!-- Rows -->
+                                        <div class="space-y-1">
+                                            <!-- Row 1 -->
+                                            <div class="grid grid-cols-4 text-xs items-center px-4 py-4 hover:bg-white/5 rounded-sm cursor-pointer transition-colors border-b border-white/[0.02] last:border-0">
+                                                <div class="col-span-2 text-white font-medium">2025 S-Class Maybach</div>
+                                                <div><span class="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></span>Ready</div>
+                                                <div class="text-right font-serif tracking-wide">$194,000</div>
+                                            </div>
+                                            <!-- Row 2 -->
+                                            <div class="grid grid-cols-4 text-xs items-center px-4 py-4 hover:bg-white/5 rounded-sm cursor-pointer transition-colors border-b border-white/[0.02] last:border-0">
+                                                <div class="col-span-2 text-white font-medium">2025 EQS 580 SUV</div>
+                                                <div><span class="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500 mr-2"></span>PDI</div>
+                                                <div class="text-right font-serif tracking-wide">$126,500</div>
+                                            </div>
+                                             <!-- Row 3 -->
+                                            <div class="grid grid-cols-4 text-xs items-center px-4 py-4 hover:bg-white/5 rounded-sm cursor-pointer transition-colors border-b border-white/[0.02] last:border-0">
+                                                <div class="col-span-2 text-white font-medium">2024 SL 63 AMG</div>
+                                                <div><span class="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></span>Ready</div>
+                                                <div class="text-right font-serif tracking-wide">$181,000</div>
+                                            </div>
+                                             <!-- Row 4 -->
+                                            <div class="grid grid-cols-4 text-xs items-center px-4 py-4 hover:bg-white/5 rounded-sm cursor-pointer transition-colors border-b border-white/[0.02] last:border-0">
+                                                <div class="col-span-2 text-white font-medium">2025 G 63 AMG</div>
+                                                <div><span class="inline-block w-1.5 h-1.5 rounded-full bg-[var(--accent-red)] mr-2"></span>Reserved</div>
+                                                <div class="text-right font-serif tracking-wide">$188,000</div>
+                                            </div>
+                                             <!-- Row 5 -->
+                                            <div class="grid grid-cols-4 text-xs items-center px-4 py-4 hover:bg-white/5 rounded-sm cursor-pointer transition-colors border-b border-white/[0.02] last:border-0">
+                                                <div class="col-span-2 text-white font-medium">2025 GT 63 S E-Performance</div>
+                                                <div><span class="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 mr-2"></span>Transit</div>
+                                                <div class="text-right font-serif tracking-wide">$204,000</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Activity Feed -->
+                                <div class="col-span-1 bg-white/5 border border-white/5 rounded-sm p-6">
+                                    <div class="text-xs text-white tracking-wide mb-6 font-medium">SERVICE BAY STATUS</div>
+                                    <div class="space-y-6">
+                                        <div class="flex gap-4 items-start group cursor-pointer">
+                                            <div class="w-8 h-8 bg-white/10 flex items-center justify-center text-[10px] text-white rounded-full group-hover:bg-white group-hover:text-black transition-colors">01</div>
+                                            <div>
+                                                <div class="text-xs text-white font-medium">Service A - S580</div>
+                                                <div class="text-[10px] text-gray-500 mt-1">Bay 4 • Tech: M.K.</div>
+                                                <div class="w-24 h-0.5 bg-white/10 mt-2 rounded-full overflow-hidden"><div class="w-2/3 h-full bg-green-500"></div></div>
+                                            </div>
+                                        </div>
+                                         <div class="flex gap-4 items-start group cursor-pointer">
+                                            <div class="w-8 h-8 bg-white/10 flex items-center justify-center text-[10px] text-white rounded-full group-hover:bg-white group-hover:text-black transition-colors">02</div>
+                                            <div>
+                                                <div class="text-xs text-white font-medium">Brake Install - G63</div>
+                                                <div class="text-[10px] text-gray-500 mt-1">Bay 2 • Tech: J.R.</div>
+                                                <div class="w-24 h-0.5 bg-white/10 mt-2 rounded-full overflow-hidden"><div class="w-1/3 h-full bg-yellow-500"></div></div>
+                                <div class="flex-1 bg-[var(--accent-red)] h-[90%] relative">
+                                    <div class="absolute -top-8 left-1/2 -translate-x-1/2 font-sans text-xs">NOW</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CTA BLOCK -->
+            <div class="mt-24 w-full flex flex-col items-center justify-center text-center pointer-events-auto">
+                <h3 class="font-serif text-4xl text-white mb-8">Elevate Your Enterprise.</h3>
+                <div class="flex flex-col md:flex-row gap-6 items-center">
+                    <button class="btn-vision px-10 py-4 text-sm tracking-widest uppercase shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:shadow-[0_0_50px_rgba(255,255,255,0.4)] hover:scale-105 transition-transform">
+                        Request Full Demo
+                    </button>
+                    <button class="px-10 py-4 rounded-full border border-white/30 text-white font-sans text-xs font-bold tracking-widest uppercase hover:bg-white hover:text-black hover:border-white transition-all duration-300">
+                        View Pricing Tiers
+                    </button>
+                </div>
+                <div class="mt-8 flex items-center gap-6 text-[10px] font-sans tracking-widest text-gray-500 uppercase opacity-60">
+                    <span class="flex items-center gap-2"><span class="w-1.5 h-1.5 bg-green-500 rounded-full shadow-[0_0_5px_#22c55e]"></span> Instant Deployment</span>
+                    <span class="w-1 h-1 bg-gray-700 rounded-full"></span>
+                    <span>Full Data Migration</span>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="bg-black py-20 px-10 md:px-24 border-t border-white/10 relative z-20">
+            <div class="flex flex-col md:flex-row justify-between items-end">
+                <div>
+                    <h2 class="font-serif text-4xl mb-6">NEXUS</h2>
+                    <div class="flex gap-6 font-sans text-xs text-gray-500 uppercase tracking-wider">
+                        <a href="#" class="hover:text-white transition-colors">Contact</a>
+                        <a href="#" class="hover:text-white transition-colors">Legal</a>
+                        <a href="#" class="hover:text-white transition-colors">Privacy</a>
+                    </div>
+                </div>
+                <div class="text-right mt-10 md:mt-0">
+                    <p class="font-sans text-xs text-gray-600">
+                        © 2025 NEXUS Automotive Systems.<br>
+                        Designed in Stuttgart.
+                    </p>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import gsap from 'https://unpkg.com/gsap@3.12.5/index.js';
+        import ScrollTrigger from 'https://unpkg.com/gsap@3.12.5/ScrollTrigger.js';
+
+        gsap.registerPlugin(ScrollTrigger);
+
+        // --- CURSOR ---
+        const cursor = document.getElementById('cursor');
+        window.addEventListener('mousemove', (e) => {
+            gsap.to(cursor, { x: e.clientX, y: e.clientY, duration: 0.1 });
+        });
+        document.querySelectorAll('a, button, .module-card, .dms-mockup').forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('active'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('active'));
+        });
+
+        // --- SCENE SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020202);
+        scene.fog = new THREE.FogExp2(0x020202, 0.02);
+
+        const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+        // Low profile camera angle
+        camera.position.set(6, 1, 9); 
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 0.8; // Dark exposure
+        container.appendChild(renderer.domElement);
+
+        // --- THE "MAGMA" RIBBON (Procedural Flow) ---
+        // Creating a dense plane mesh that we displace with noise to look like the red light flow
+        const ribbonGeo = new THREE.PlaneGeometry(30, 10, 100, 40);
+        
+        // Custom Shader for the Ribbon
+        const RibbonShader = {
+            uniforms: {
+                time: { value: 0 },
+                color: { value: new THREE.Color(0xD90429) } // Vision Red
+            },
+            vertexShader: `
+                uniform float time;
+                varying vec2 vUv;
+                varying float vElevation;
+
+                void main() {
+                    vUv = uv;
+                    vec3 pos = position;
+                    
+                    // Flowing Sine Waves
+                    float elevation = sin(pos.x * 0.5 + time) * 1.0 
+                                    + sin(pos.y * 1.0 + time * 0.8) * 0.5;
+                    
+                    // Arch over the car
+                    pos.z += elevation;
+                    pos.y += cos(pos.x * 0.3) * 2.0; 
+
+                    vElevation = elevation;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform vec3 color;
+                varying vec2 vUv;
+                varying float vElevation;
+
+                void main() {
+                    // Gradient Fade
+                    float alpha = smoothstep(0.0, 0.2, vUv.y) * smoothstep(1.0, 0.8, vUv.y);
+                    
+                    // Highlights based on elevation
+                    vec3 finalColor = color + vec3(vElevation * 0.3);
+                    
+                    gl_FragColor = vec4(finalColor, alpha * 0.6);
+                }
+            `
+        };
+
+        const ribbonMat = new THREE.ShaderMaterial({
+            uniforms: RibbonShader.uniforms,
+            vertexShader: RibbonShader.vertexShader,
+            fragmentShader: RibbonShader.fragmentShader,
+            transparent: true,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const ribbon = new THREE.Mesh(ribbonGeo, ribbonMat);
+        ribbon.position.set(0, 4, -5);
+        ribbon.rotation.x = -Math.PI / 3;
+        scene.add(ribbon);
+
+        // --- THE FLAGSHIP VEHICLE ---
+        const carGroup = new THREE.Group();
+        scene.add(carGroup);
+        carGroup.position.set(1, -0.8, 0);
+        carGroup.rotation.y = -Math.PI / 6; // Profile view
+
+        // Materials: Concept Black (Super glossy, very dark)
+        const paintMat = new THREE.MeshPhysicalMaterial({
+            color: 0x000000,
+            metalness: 0.9,
+            roughness: 0.1,
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.0,
+            envMapIntensity: 2.5 // Rely on reflections
+        });
+        const chromeMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 1.0, roughness: 0.1 });
+        const redLightMat = new THREE.MeshBasicMaterial({ color: 0xD90429 });
+
+        // 1. Body Sculpting (Vision Concept Shape - Long Tail)
+        const bodyGeo = new THREE.BoxGeometry(2.2, 0.75, 6.0, 40, 20, 60);
+        const pos = bodyGeo.attributes.position;
+        for(let i=0; i<pos.count; i++){
+            let x = pos.getX(i); let y = pos.getY(i); let z = pos.getZ(i);
+            const nz = z/3.0;
+            
+            // Streamline Taper
+            let w = 1.0;
+            if(nz > 0.4) w = 1.05; // Hips
+            if(nz < -0.7) w = 0.85; // Nose
+            x *= w;
+
+            // Concept Profile (Very low, very long)
+            if(nz < -0.4) y -= Math.pow(nz+0.4, 2) * 0.5; // Smooth hood
+            if(nz > 0.6) y -= Math.pow(nz-0.6, 2) * 0.8; // Boat tail drop
+
+            // Dome Roof
+            if(y > 0) {
+                x *= 0.7; // Tumblehome
+                if(nz > -0.5 && nz < 0.8) y += Math.cos(nz * 1.2) * 0.35; 
+            }
+
+            // Wheel Wells
+            const dF = Math.abs(z - (-1.8)); const dR = Math.abs(z - 1.8);
+            if((dF < 0.8 || dR < 0.8) && y < 0.1) x *= 1.1;
+
+            pos.setXYZ(i, x, y, z);
+        }
+        bodyGeo.computeVertexNormals();
+        const body = new THREE.Mesh(bodyGeo, paintMat);
+        body.castShadow = true; body.receiveShadow = true;
+        carGroup.add(body);
+
+        // 2. Red Light Strip (Rear)
+        const tailLight = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.02, 0.05), redLightMat);
+        tailLight.position.set(0, 0.15, 2.85);
+        // Curve it
+        const tlPos = tailLight.geometry.attributes.position;
+        for(let i=0; i<tlPos.count; i++) tlPos.setZ(i, tlPos.getZ(i) - Math.pow(tlPos.getX(i), 2)*0.5);
+        carGroup.add(tailLight);
+
+        // 3. Wheels (Turbine Concept - Blacked Out)
+        const wheelGeo = new THREE.CylinderGeometry(0.48, 0.48, 0.35, 64);
+        const tireMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.8 });
+        const rimMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.2 });
+        
+        const wPos = [[-1.1, -0.38, 1.8], [1.1, -0.38, 1.8], [-1.1, -0.38, -1.8], [1.1, -0.38, -1.8]];
+        wPos.forEach(p => {
+            const grp = new THREE.Group();
+            const t = new THREE.Mesh(wheelGeo, tireMat);
+            t.rotation.z = Math.PI/2;
+            grp.add(t);
+            const r = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.36, 16), rimMat);
+            r.rotation.z = Math.PI/2;
+            grp.add(r);
+            
+            // Red Ring Accent
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.005, 16, 32), redLightMat);
+            ring.rotation.y = Math.PI/2;
+            ring.position.x = p[0] > 0 ? 0.18 : -0.18;
+            grp.add(ring);
+
+            grp.position.set(...p);
+            carGroup.add(grp);
+        });
+
+
+        // --- LIGHTING (Low Key) ---
+        // Top softbox (cool white)
+        const areaLight = new THREE.RectAreaLight(0xffffff, 2, 10, 2);
+        areaLight.position.set(0, 5, 0);
+        areaLight.rotation.x = -Math.PI / 2;
+        scene.add(areaLight);
+
+        // Rim Light Left (White) - Defines the silhouette
+        const spotL = new THREE.SpotLight(0xffffff, 20);
+        spotL.position.set(-10, 2, -5);
+        spotL.lookAt(0, 0, 0);
+        scene.add(spotL);
+
+        // Rim Light Right (Red) - Adds the "Vision" tint
+        const spotR = new THREE.SpotLight(0xD90429, 10);
+        spotR.position.set(10, 2, -5);
+        spotR.lookAt(0, 0, 0);
+        scene.add(spotR);
+
+        // Floor Reflection
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(50,50), new THREE.MeshPhysicalMaterial({ 
+            color: 0x020202, roughness: 0.2, metalness: 0.8 
+        }));
+        plane.rotation.x = -Math.PI/2; plane.position.y = -0.85;
+        scene.add(plane);
+
+
+        // --- POST PROCESSING ---
+        const composer = new EffectComposer(renderer);
+        composer.addPass(new RenderPass(scene, camera));
+        
+        // Bloom (Stronger for the red ribbon)
+        const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+        bloom.threshold = 0.1; bloom.strength = 0.8; bloom.radius = 0.8;
+        composer.addPass(bloom);
+
+        // Noise/Film Grain
+        const NoiseShader = {
+            uniforms: { tDiffuse: { value: null }, amount: { value: 0.05 } },
+            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+            fragmentShader: `
+                uniform sampler2D tDiffuse; uniform float amount; varying vec2 vUv;
+                float random(vec2 p) { return fract(sin(dot(p.xy, vec2(12.9898,78.233))) * 43758.5453); }
+                void main() {
+                    vec4 color = texture2D(tDiffuse, vUv);
+                    color.rgb += (random(vUv) - 0.5) * amount;
+                    gl_FragColor = color;
+                }
+            `
+        };
+        const noisePass = new ShaderPass(NoiseShader);
+        composer.addPass(noisePass);
+
+
+        // --- ANIMATION ---
+        
+        // Intro
+        const tl = gsap.timeline();
+        tl.to("#preloader", { opacity: 0, duration: 1.5, delay: 1, pointerEvents: "none" })
+          .from(carGroup.position, { z: -5, duration: 2.5, ease: "power2.out" }, "-=1")
+          .to(".reveal-text", { y: 0, opacity: 1, duration: 1.5, stagger: 0.2 }, "-=1.5");
+
+        // Scroll Triggers
+        gsap.to(carGroup.rotation, {
+            scrollTrigger: { trigger: "body", start: "top top", end: "bottom bottom", scrub: 2 },
+            y: -Math.PI * 0.8 // Rotate to reveal rear lights
+        });
+        
+        gsap.to(camera.position, {
+            scrollTrigger: { trigger: "body", start: "top top", end: "bottom bottom", scrub: 2 },
+            z: 6, y: 3 // Move camera up and close
+        });
+
+        gsap.to(ribbon.position, {
+            scrollTrigger: { trigger: "body", start: "top top", end: "bottom bottom", scrub: 2 },
+            z: 5, y: 2 // Move ribbon over car
+        });
+        
+        // Blur canvas when reading text
+        gsap.to(renderer.domElement, {
+            scrollTrigger: { trigger: "#intelligence", start: "top center", end: "center center", scrub: 1 },
+            filter: "blur(10px) brightness(0.4)"
+        });
+
+
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const t = clock.getElapsedTime();
+            
+            // Ribbon Flow
+            ribbonMat.uniforms.time.value = t * 0.5;
+            
+            // Car float
+            carGroup.position.y = -0.8 + Math.sin(t * 0.5) * 0.005;
+
+            composer.render();
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+
+    </script>
+</body>
+</html>
