@@ -139,7 +139,7 @@ export default function LandingUI() {
                         </p>
                         <Link href="/login">
                             <button className="bg-white text-black px-12 py-4 rounded-full font-sans font-semibold text-sm transition-transform duration-300 hover:scale-105 reveal-text translate-y-10 opacity-0">
-                                Explore Platform
+                                Login to Platform
                             </button>
                         </Link>
                     </div>
