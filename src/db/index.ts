@@ -17,6 +17,13 @@ if (!url || !authToken) {
     // We throw only if we are sure it's not a build step.
     // But for now, let's use a non-routable IP to fail fast instead of dummy-url which might try DNS.
   }
+} else {
+  if (process.env.NODE_ENV === 'production') {
+    console.log("Database configuration loaded successfully.");
+    // Log masked token for debugging
+    console.log(`TURSO_CONNECTION_URL: ${url}`);
+    console.log(`TURSO_AUTH_TOKEN: ${authToken ? authToken.substring(0, 5) + '...' : 'MISSING'}`);
+  }
 }
 
 const client = createClient({

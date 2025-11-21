@@ -86,5 +86,15 @@ export const auth = betterAuth({
         process.env.BETTER_AUTH_URL || "",
         process.env.NEXT_PUBLIC_APP_URL || ""
     ].filter(Boolean), // Remove empty strings
+    onAPIError: {
+        onError: async (error: any, ctx: any) => {
+            console.error("Better Auth API Error:", {
+                message: error?.message || "Unknown error",
+                status: error?.status || 500,
+                path: ctx?.path || "Unknown path",
+                body: ctx?.body || "No body"
+            });
+        },
+    },
 });
 
