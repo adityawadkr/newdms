@@ -47,13 +47,18 @@ export default function LoginPage() {
                         router.push("/dashboard")
                     },
                     onError: (ctx) => {
-                        setError(ctx.error.message)
+                        setError(ctx.error.message || "Invalid credentials")
                         setLoading(false)
                     }
                 }
             })
-        } catch (err) {
-            setError("An unexpected error occurred")
+        } catch (err: any) {
+            console.error("Login error:", err)
+            if (err.message && err.message.includes("fetch")) {
+                setError("Unable to connect to the server. Please check your internet connection or try again later.")
+            } else {
+                setError(err.message || "An unexpected error occurred. Please try again.")
+            }
             setLoading(false)
         }
     }

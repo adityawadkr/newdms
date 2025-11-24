@@ -7,15 +7,36 @@ import * as schema from "@/db/schema";
 
 import nodemailer from "nodemailer";
 
+// Validation for required environment variables
+if (!process.env.BETTER_AUTH_SECRET) {
+    console.error("CRITICAL: BETTER_AUTH_SECRET is missing.");
+}
+if (!process.env.BETTER_AUTH_URL && process.env.NODE_ENV === 'production') {
+    console.error("CRITICAL: BETTER_AUTH_URL is missing in production.");
+}
+
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.example.com",
+    host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT) || 587,
     secure: process.env.SMTP_SECURE === "true",
     auth: {
-        user: process.env.SMTP_USER || "user",
-        pass: process.env.SMTP_PASS || "pass",
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
     },
 });
+
+// Verify SMTP connection on startup (optional, good for debugging)
+if (process.env.SMTP_HOST) {
+    transporter.verify(function (error, success) {
+        if (error) {
+            console.warn("SMTP Connection Error:", error);
+        } else {
+            console.log("SMTP Server is ready to take our messages");
+        }
+    });
+} else {
+    console.warn("WARNING: SMTP_HOST is missing. Email sending will fail.");
+}
 
 export const auth = betterAuth({
     secret: process.env.BETTER_AUTH_SECRET || "dev-secret",

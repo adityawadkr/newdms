@@ -6,23 +6,15 @@ const url = process.env.TURSO_CONNECTION_URL;
 const authToken = process.env.TURSO_AUTH_TOKEN;
 
 if (!url || !authToken) {
-  // In production, we must have these variables.
-  // If they are missing, we throw to prevent hanging with dummy values.
-  // We only allow dummy values during build time (if needed).
-  if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PHASE) { // NEXT_PHASE is set during build? No.
-    // Better check: if we are running in a browser or edge, we need them.
-    // But this runs on server.
-    // Let's just log error and throw if it's critical.
-    console.error("CRITICAL: TURSO_CONNECTION_URL or TURSO_AUTH_TOKEN is missing.");
-    // We throw only if we are sure it's not a build step.
-    // But for now, let's use a non-routable IP to fail fast instead of dummy-url which might try DNS.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error("CRITICAL: TURSO_CONNECTION_URL or TURSO_AUTH_TOKEN is missing in production environment.");
+  } else {
+    console.warn("WARNING: TURSO_CONNECTION_URL or TURSO_AUTH_TOKEN is missing. Using dummy values for local development/build.");
   }
 } else {
-  if (process.env.NODE_ENV === 'production') {
+  // Log success only in dev or if needed for debugging (be careful with logs in prod)
+  if (process.env.NODE_ENV !== 'production') {
     console.log("Database configuration loaded successfully.");
-    // Log masked token for debugging
-    console.log(`TURSO_CONNECTION_URL: ${url}`);
-    console.log(`TURSO_AUTH_TOKEN: ${authToken ? authToken.substring(0, 5) + '...' : 'MISSING'}`);
   }
 }
 

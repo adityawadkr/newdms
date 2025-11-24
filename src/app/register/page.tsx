@@ -61,7 +61,12 @@ export default function RegisterPage() {
         },
       })
     } catch (err: any) {
-      setError(err.message || "Something went wrong")
+      console.error("Registration error:", err)
+      if (err.message && err.message.includes("fetch")) {
+        setError("Unable to connect to the server. Please check your internet connection or try again later.")
+      } else {
+        setError(err.message || "Something went wrong. Please try again.")
+      }
       setLoading(false)
     }
   }
