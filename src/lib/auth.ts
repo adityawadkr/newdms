@@ -104,6 +104,7 @@ export const auth = betterAuth({
         "http://192.168.1.5:3000",
         "http://192.168.1.5:3001",
         "https://newdms.netlify.app",
+        "https://a-dms.netlify.app",
         process.env.BETTER_AUTH_URL || "",
         process.env.NEXT_PUBLIC_APP_URL || ""
     ].filter(Boolean), // Remove empty strings
