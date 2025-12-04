@@ -38,7 +38,10 @@ if (process.env.SMTP_HOST) {
     console.warn("WARNING: SMTP_HOST is missing. Email sending will fail.");
 }
 
+const baseURL = process.env.NODE_ENV === "development" ? "http://localhost:3000" : (process.env.BETTER_AUTH_URL || "https://newdms.netlify.app");
+
 export const auth = betterAuth({
+    baseURL: baseURL,
     secret: process.env.BETTER_AUTH_SECRET || "dev-secret",
     database: drizzleAdapter(db, {
         provider: "sqlite",
@@ -99,10 +102,13 @@ export const auth = betterAuth({
     trustedOrigins: [
         "http://localhost:3000",
         "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3003",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
-        "http://192.168.1.5:3000",
-        "http://192.168.1.5:3001",
+        "http://127.0.0.1:3002",
+        "http://127.0.0.1:3003",
+        "https://a-dms.netlify.app",
         "https://newdms.netlify.app",
         process.env.BETTER_AUTH_URL || "",
         process.env.NEXT_PUBLIC_APP_URL || ""

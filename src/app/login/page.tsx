@@ -37,23 +37,28 @@ export default function LoginPage() {
         e.preventDefault()
         setError(null)
         setLoading(true)
+        console.log("🔵 Attempting login with:", email);
 
         try {
+            console.log("🟡 Calling authClient.signIn.email...");
             await authClient.signIn.email({
                 email,
                 password,
                 fetchOptions: {
                     onSuccess: () => {
+                        console.log("✅ Login SUCCESS! Redirecting...");
                         router.push("/dashboard")
                     },
                     onError: (ctx) => {
+                        console.error("❌ Login FAILED (onError):", ctx);
                         setError(ctx.error.message || "Invalid credentials")
                         setLoading(false)
                     }
                 }
             })
+            console.log("🟡 authClient.signIn.email call completed (await returned).");
         } catch (err: any) {
-            console.error("Login error:", err)
+            console.error("❌ Login EXCEPTION:", err)
             if (err.message && err.message.includes("fetch")) {
                 setError("Unable to connect to the server. Please check your internet connection or try again later.")
             } else {
