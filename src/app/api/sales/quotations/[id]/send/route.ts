@@ -63,14 +63,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
                                     ${lineItemsHtml}
                                 </tbody>
                                 <tfoot>
-                                    <tr>
-                                        <td style="padding: 12px; border-top: 2px solid #e4e4e7; font-weight: 600; color: #18181b;">Subtotal</td>
-                                        <td style="padding: 12px; border-top: 2px solid #e4e4e7; text-align: right; font-weight: 600; color: #18181b;">₹${quotation.subtotal.toLocaleString()}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 12px; color: #71717a;">Tax</td>
-                                        <td style="padding: 12px; text-align: right; color: #71717a;">₹${quotation.tax.toLocaleString()}</td>
-                                    </tr>
                                     <tr style="background: #f4f4f5;">
                                         <td style="padding: 16px 12px; font-weight: 700; font-size: 18px; color: #18181b;">Total</td>
                                         <td style="padding: 16px 12px; text-align: right; font-weight: 700; font-size: 18px; color: #18181b;">₹${quotation.total.toLocaleString()}</td>
@@ -89,16 +81,36 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
                     </div>
                 `;
 
-                await resend.emails.send({
-                    from: 'AutoFlow Sales <onboarding@resend.dev>',
+                // Use custom domain if configured, otherwise use Resend's test domain
+                const senderEmail = process.env.RESEND_FROM_EMAIL || 'no-reply@resend.dev';
+                const senderName = process.env.RESEND_FROM_NAME || 'AutoFlow Sales';
+
+                const result = await resend.emails.send({
+                    from: `${senderName} <${senderEmail}>`,
                     to: email,
                     subject: `Quotation #${quotation.number} - ${quotation.vehicle}`,
                     html: emailHtml
                 });
-                console.log(`📧 Email sent to ${email} via Resend`);
-            } catch (emailError) {
+                console.log(`📧 Email sent to ${email} via Resend:`, result);
+            } catch (emailError: any) {
                 console.error("❌ Failed to send email via Resend:", emailError);
-                // Continue to update status even if email fails
+                // Check for common Resend errors
+                const errorMessage = emailError?.message || emailError?.name || "Email send failed";
+
+                // Provide helpful error messages
+                if (errorMessage.includes("verify") || errorMessage.includes("domain") || emailError?.statusCode === 403) {
+                    return NextResponse.json({
+                        error: "Email not sent - domain verification required",
+                        details: "On Resend free tier, emails can only be sent to your verified email address. To send to customers, please verify a custom domain in Resend dashboard.",
+                        hint: "Set RESEND_FROM_EMAIL in your .env to use a verified domain email"
+                    }, { status: 400 });
+                }
+
+                return NextResponse.json({
+                    error: errorMessage,
+                    details: emailError?.statusCode ? `Status: ${emailError.statusCode}` : "Check Resend dashboard for details",
+                    hint: "On free tier, you can only send to your own verified email address"
+                }, { status: 400 });
             }
         } else {
             console.log(`📧 [SIMULATION] Email would be sent to ${email}`);

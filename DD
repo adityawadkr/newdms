@@ -1,0 +1,595 @@
+import React, { useState, useEffect, useRef } from 'react';
+import * as THREE from 'three';
+import { 
+  LucideSearch, 
+  LucideMenu, 
+  LucideX, 
+  LucideArrowRight, 
+  LucideSun, 
+  LucideMoon, 
+  LucideLayoutDashboard,
+  LucideCar,
+  LucideBox,
+  LucideUsers,
+  LucideSettings,
+  LucideBell,
+  LucidePlus,
+  LucideChevronDown,
+  LucideBriefcase,
+  LucideCalendar,
+  LucideClipboardList,
+  LucideFileText,
+  LucideTruck,
+  LucideBookmark,
+  LucideGauge,
+  LucideLogOut,
+  LucideChevronLeft,
+  LucideChevronRight,
+  LucideMessageSquare,
+  LucideAlertCircle,
+  LucideCheckCircle
+} from 'lucide-react';
+
+/**
+ * ------------------------------------------------------------------
+ * MOCK DATA GATEWAY (API INTERFACE)
+ * ------------------------------------------------------------------
+ */
+const mockData = {
+  stats: {
+    revenue: { value: "₹45.2L", trend: 20.1, label: "Total Revenue" },
+    leads: { value: "124", trend: 12.5, label: "Active Leads" },
+    sold: { value: "38", trend: -4.5, label: "Vehicles Sold" },
+    bookings: { value: "89", trend: 8.2, label: "Service Bookings" }
+  },
+  inventory: {
+    inStock: 45,
+    booked: 25,
+    transit: 15,
+    total: 100
+  },
+  salesCurve: [150, 140, 100, 110, 120, 80, 60, 40, 90, 70, 50, 20, 30],
+  notifications: [
+    { id: 1, type: 'alert', title: 'Low Inventory Alert', message: 'S-Class (W223) stock is below threshold.', time: '10m ago' },
+    { id: 2, type: 'success', title: 'Sale Confirmed', message: 'Vehicle #VIN-9928 marked as sold.', time: '1h ago' },
+    { id: 3, type: 'info', title: 'New Lead Assigned', message: 'High-value prospect assigned to sales.', time: '2h ago' },
+    { id: 4, type: 'info', title: 'Service Update', message: 'Maintenance schedule updated for Q3.', time: '5h ago' }
+  ]
+};
+
+/**
+ * ------------------------------------------------------------------
+ * 3D SCENE: "LIQUID LUXURY"
+ * ------------------------------------------------------------------
+ */
+const LuxuryBackground = ({ isDarkMode }) => {
+  const mountRef = useRef(null);
+
+  useEffect(() => {
+    if (!mountRef.current) return;
+
+    const scene = new THREE.Scene();
+    scene.background = null; 
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 12);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    mountRef.current.appendChild(renderer.domElement);
+
+    const geometry = new THREE.TorusKnotGeometry(3.5, 1.2, 128, 32); 
+    const material = new THREE.MeshPhysicalMaterial({
+      color: isDarkMode ? 0x0a0a0a : 0xf0f0f0,
+      metalness: 0.9,
+      roughness: 0.1,
+      reflectivity: 1.0,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.1,
+      transparent: true,
+      opacity: 0.08,
+      side: THREE.DoubleSide
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    const ambientLight = new THREE.AmbientLight(isDarkMode ? 0xffffff : 0x000000, 0.5);
+    scene.add(ambientLight);
+
+    const light1 = new THREE.PointLight(isDarkMode ? 0xd4af37 : 0x003366, 2);
+    light1.position.set(10, 10, 10);
+    scene.add(light1);
+
+    const light2 = new THREE.PointLight(isDarkMode ? 0xffffff : 0xffaa00, 1);
+    light2.position.set(-10, -10, 5);
+    scene.add(light2);
+
+    const clock = new THREE.Clock();
+    let frameId;
+
+    const animate = () => {
+      const t = clock.getElapsedTime();
+      mesh.rotation.x = Math.sin(t * 0.1) * 0.1;
+      mesh.rotation.y = Math.cos(t * 0.15) * 0.1;
+      mesh.position.y = Math.sin(t * 0.2) * 0.2;
+
+      if (isDarkMode) {
+          light1.color.setHex(0xd4af37);
+      } else {
+          light1.color.setHex(0x003366);
+      }
+      
+      renderer.render(scene, camera);
+      frameId = requestAnimationFrame(animate);
+    };
+    animate();
+
+    const handleResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(frameId);
+      if (mountRef.current && renderer.domElement) {
+        mountRef.current.removeChild(renderer.domElement);
+      }
+      geometry.dispose();
+      material.dispose();
+      renderer.dispose();
+    };
+  }, [isDarkMode]);
+
+  return <div ref={mountRef} className="fixed inset-0 z-0 pointer-events-none transition-opacity duration-1000 ease-in-out" />;
+};
+
+/**
+ * ------------------------------------------------------------------
+ * CUSTOM CHART COMPONENTS
+ * ------------------------------------------------------------------
+ */
+
+const ElegantLineChart = ({ isDarkMode, dataPoints }) => {
+    const width = 600;
+    const height = 200;
+    const maxVal = Math.max(...dataPoints, 200);
+    
+    const points = dataPoints.map((val, i) => {
+        const x = (i / (dataPoints.length - 1)) * width;
+        const y = height - ((val / maxVal) * height);
+        return `${x},${y}`;
+    });
+
+    const pathData = `M0,${height} L0,${height - ((dataPoints[0]/maxVal)*height)} ${points.map((p, i) => i === 0 ? '' : `L${p}`).join(' ')} L${width},${height} Z`;
+    const lineData = `M0,${height - ((dataPoints[0]/maxVal)*height)} ${points.map((p, i) => i === 0 ? '' : `L${p}`).join(' ')}`;
+
+    return (
+        <div className="relative w-full h-48 overflow-hidden group">
+            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full preserve-3d">
+                <defs>
+                    <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor={isDarkMode ? "#D4AF37" : "#003366"} stopOpacity="0.2" />
+                        <stop offset="100%" stopColor={isDarkMode ? "#D4AF37" : "#003366"} stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+                {[40, 80, 120, 160].map(y => (
+                    <line key={y} x1="0" y1={y} x2={width} y2={y} stroke={isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} strokeWidth="1" />
+                ))}
+                <path d={pathData} fill="url(#chartGradient)" className="transition-all duration-1000 ease-out" />
+                <path d={lineData} fill="none" stroke={isDarkMode ? "#D4AF37" : "#003366"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                {points.map((p, i) => {
+                   const [cx, cy] = p.split(',');
+                   if (i % 3 !== 0) return null;
+                   return (
+                     <circle key={i} cx={cx} cy={cy} r="3" fill={isDarkMode ? "#000" : "#fff"} stroke={isDarkMode ? "#D4AF37" : "#003366"} strokeWidth="2" className="opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                   )
+                })}
+            </svg>
+            <div className={`absolute top-[20%] left-[60%] px-4 py-3 backdrop-blur-xl border rounded-lg shadow-2xl transform transition-all duration-500 hover:scale-105
+                ${isDarkMode ? 'bg-black/40 border-[#D4AF37]/30 text-white' : 'bg-white/60 border-[#003366]/20 text-[#003366]'}
+            `}>
+                <div className="font-mono opacity-60 text-[9px] uppercase tracking-widest mb-1">Current Velocity</div>
+                <div className="font-serif text-xl flex items-center gap-2">
+                    €240k
+                    <span className="text-[10px] text-green-500 font-sans font-bold bg-green-500/10 px-1.5 py-0.5 rounded">+4.2%</span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const LuxuryDonutChart = ({ isDarkMode, data }) => {
+    const total = data.total;
+    const s1 = (data.inStock / total) * 251;
+    
+    return (
+        <div className="relative w-40 h-40 mx-auto flex items-center justify-center group">
+             <div className={`absolute inset-0 rounded-full blur-2xl opacity-20 ${isDarkMode ? 'bg-[#D4AF37]' : 'bg-[#003366]'}`} />
+             <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90 relative z-10">
+                <circle cx="50" cy="50" r="40" fill="none" stroke={isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} strokeWidth="6" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke={isDarkMode ? "#D4AF37" : "#003366"} strokeWidth="6" 
+                        strokeDasharray={`${s1} 251`} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
+            </svg>
+            <div className={`absolute text-center ${isDarkMode ? 'text-white' : 'text-[#003366]'}`}>
+                <div className="text-3xl font-serif">{data.total}</div>
+                <div className="text-[9px] font-mono tracking-[0.2em] opacity-50 uppercase">Fleet</div>
+            </div>
+        </div>
+    );
+};
+
+
+/**
+ * ------------------------------------------------------------------
+ * DASHBOARD UI COMPONENTS
+ * ------------------------------------------------------------------
+ */
+
+const SidebarCategory = ({ title, collapsed }) => (
+    <div className={`px-6 pb-3 mt-6 text-[9px] font-mono opacity-40 uppercase tracking-[0.2em] transition-opacity duration-300 ${collapsed ? 'opacity-0 h-0 overflow-hidden mt-0 pb-0' : 'opacity-40'}`}>
+        {title}
+    </div>
+);
+
+const SidebarItem = ({ icon: Icon, label, active, onClick, isDarkMode, collapsed }) => (
+    <button 
+        onClick={onClick}
+        title={collapsed ? label : ''}
+        className={`
+            w-full group flex items-center gap-4 px-6 py-3 cursor-pointer transition-all duration-500 border-l-[3px] relative overflow-hidden
+            ${active 
+                ? (isDarkMode 
+                    ? 'border-[#D4AF37] bg-gradient-to-r from-[#D4AF37]/10 to-transparent text-white' 
+                    : 'border-[#003366] bg-gradient-to-r from-[#003366]/5 to-transparent text-[#003366]') 
+                : 'border-transparent opacity-50 hover:opacity-100'
+            }
+            ${!active && (isDarkMode ? 'text-gray-400' : 'text-gray-600')}
+            ${collapsed ? 'justify-center px-2 border-l-0' : ''}
+        `}
+    >
+        {active && collapsed && (
+             <div className={`absolute inset-0 opacity-20 ${isDarkMode ? 'bg-[#D4AF37]' : 'bg-[#003366]'}`} />
+        )}
+        <Icon size={16} strokeWidth={active ? 2 : 1.5} className={`flex-shrink-0 transition-colors ${active ? (isDarkMode ? "text-[#D4AF37]" : "text-[#003366]") : ""}`} />
+        <span className={`text-[11px] tracking-widest uppercase whitespace-nowrap transition-all duration-300 ${active ? 'font-bold' : 'font-medium'} ${collapsed ? 'w-0 opacity-0 translate-x-4' : 'w-auto opacity-100 translate-x-0'}`}>
+            {label}
+        </span>
+    </button>
+);
+
+const NotificationPanel = ({ isOpen, isDarkMode, notifications, onClose }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className={`absolute top-20 right-10 w-80 z-50 rounded-2xl border backdrop-blur-xl shadow-2xl animate-in slide-in-from-top-2 fade-in duration-300
+            ${isDarkMode ? 'bg-[#0a0a0a]/90 border-white/10 text-white' : 'bg-white/90 border-black/10 text-gray-900'}
+        `}>
+            <div className="flex items-center justify-between p-4 border-b border-white/5">
+                <span className="text-xs font-bold tracking-widest uppercase">Notifications</span>
+                <button onClick={onClose} className="opacity-50 hover:opacity-100"><LucideX size={14} /></button>
+            </div>
+            <div className="max-h-80 overflow-y-auto scrollbar-hide p-2">
+                {notifications.map(notif => (
+                    <div key={notif.id} className={`p-3 mb-2 rounded-lg cursor-pointer transition-colors ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-black/5'}`}>
+                        <div className="flex items-start gap-3">
+                            <div className={`mt-1 ${notif.type === 'alert' ? 'text-red-500' : notif.type === 'success' ? 'text-green-500' : 'text-blue-500'}`}>
+                                {notif.type === 'alert' ? <LucideAlertCircle size={14} /> : notif.type === 'success' ? <LucideCheckCircle size={14} /> : <LucideMessageSquare size={14} />}
+                            </div>
+                            <div>
+                                <h4 className="text-xs font-bold mb-0.5">{notif.title}</h4>
+                                <p className="text-[10px] opacity-60 leading-relaxed">{notif.message}</p>
+                                <span className="text-[9px] opacity-40 font-mono mt-1 block">{notif.time}</span>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <div className="p-3 border-t border-white/5 text-center">
+                <button className="text-[10px] font-bold tracking-widest opacity-60 hover:opacity-100 hover:text-[#D4AF37]">MARK ALL READ</button>
+            </div>
+        </div>
+    );
+};
+
+const StatPanel = ({ title, value, sub, trend, isDarkMode }) => (
+    <div className={`
+        relative p-6 border transition-all duration-500 hover:-translate-y-1 overflow-hidden group
+        ${isDarkMode ? 'border-white/5 bg-[#0a0a0a]/60' : 'border-black/5 bg-white/60'}
+        backdrop-blur-xl shadow-sm hover:shadow-2xl
+    `}>
+        <div className={`absolute top-0 left-0 w-full h-[2px] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-700 ${isDarkMode ? 'bg-[#D4AF37]' : 'bg-[#003366]'}`} />
+
+        <div className="flex justify-between items-start mb-4">
+            <h3 className="text-[10px] font-mono uppercase tracking-[0.2em] opacity-50">{title}</h3>
+            <div className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 ${trend > 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                {trend > 0 ? '+' : ''}{trend}%
+            </div>
+        </div>
+        
+        <div className="relative z-10">
+            <div className={`text-3xl font-serif mb-1 ${isDarkMode ? 'text-white' : 'text-[#003366]'}`}>{value}</div>
+            <div className="text-[10px] opacity-40 font-light tracking-wide">{sub}</div>
+        </div>
+
+        <div className={`absolute -right-10 -bottom-10 w-20 h-20 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-700 ${isDarkMode ? 'bg-[#D4AF37]' : 'bg-[#003366]'}`} />
+    </div>
+);
+
+export default function LuxuryDashboard() {
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [activeTab, setActiveTab] = useState('Dashboard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+        await new Promise(r => setTimeout(r, 500));
+        setData(mockData);
+    };
+    fetchData();
+  }, []);
+
+  const bgClass = isDarkMode ? 'bg-[#050505]' : 'bg-[#F5F5F7]';
+  const textClass = isDarkMode ? 'text-white' : 'text-gray-900';
+  const borderClass = isDarkMode ? 'border-white/10' : 'border-black/5';
+  const navBg = isDarkMode ? 'bg-[#050505]/80' : 'bg-[#F5F5F7]/80';
+
+  return (
+    <div className={`flex h-screen w-full transition-colors duration-700 ease-in-out font-sans ${bgClass} ${textClass} overflow-hidden selection:bg-[#D4AF37] selection:text-black`}>
+      
+      <LuxuryBackground isDarkMode={isDarkMode} />
+
+      {/* Sidebar */}
+      <aside className={`
+          flex-shrink-0 z-30 flex flex-col border-r backdrop-blur-xl transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]
+          ${borderClass} 
+          ${isDarkMode ? 'bg-black/20' : 'bg-white/40'}
+          ${isSidebarCollapsed ? 'w-20' : 'w-72'}
+      `}>
+        <div className={`p-8 pb-4 flex items-center ${isSidebarCollapsed ? 'justify-center p-4' : 'justify-between'}`}>
+            {/* Brand */}
+            <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-500 flex-shrink-0 ${isDarkMode ? 'bg-white text-black' : 'bg-[#003366] text-white'}`}>
+                    <span className="font-serif italic font-bold text-xl">M</span>
+                </div>
+                {!isSidebarCollapsed && (
+                    <div className="animate-in fade-in slide-in-from-left-2 duration-300">
+                        <div className="text-xs font-bold tracking-[0.3em] uppercase">Mercurius</div>
+                        <div className="text-[8px] opacity-40 tracking-wider uppercase">Dealer Systems</div>
+                    </div>
+                )}
+            </div>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto scrollbar-hide pb-6 overflow-x-hidden">
+            <SidebarCategory title="Overview" collapsed={isSidebarCollapsed} />
+            <SidebarItem icon={LucideLayoutDashboard} label="Dashboard" active={activeTab === 'Dashboard'} onClick={() => setActiveTab('Dashboard')} isDarkMode={isDarkMode} collapsed={isSidebarCollapsed} />
+            
+            <SidebarCategory title="Operations" collapsed={isSidebarCollapsed} />
+            <SidebarItem icon={LucideCar} label="Vehicle Inventory" active={activeTab === 'Vehicle Inventory'} onClick={() => setActiveTab('Vehicle Inventory')} isDarkMode={isDarkMode} collapsed={isSidebarCollapsed} />
+            <SidebarItem icon={LucideBox} label="Spare Parts" active={activeTab === 'Spare Parts'} onClick={() => setActiveTab('Spare Parts')} isDarkMode={isDarkMode} collapsed={isSidebarCollapsed} />
+            
+            <SidebarCategory title="Sales" collapsed={isSidebarCollapsed} />
+            <SidebarItem icon={LucideUsers} label="Leads" active={activeTab === 'Leads'} onClick={() => setActiveTab('Leads')} isDarkMode={isDarkMode} collapsed={isSidebarCollapsed} />
+            <SidebarItem icon={LucideGauge} label="Test Drives" active={activeTab === 'Test Drives'} onClick={() => setActiveTab('Test Drives')} isDarkMode={isDarkMode} collapsed={isSidebarCollapsed} />
+            <SidebarItem icon={LucideFileText} label="Quotations" active={activeTab === 'Quotations'} onClick={() => setActiveTab('Quotations')} isDarkMode={isDarkMode} collapsed={isSidebarCollapsed} />
+            <SidebarItem icon={LucideBookmark} label="Bookings" active={activeTab === 'Bookings'} onClick={() => setActiveTab('Bookings')} isDarkMode={isDarkMode} collapsed={isSidebarCollapsed} />
+            <SidebarItem icon={LucideTruck} label="Delivery" active={activeTab === 'Delivery'} onClick={() => setActiveTab('Delivery')} isDarkMode={isDarkMode} collapsed={isSidebarCollapsed} />
+
+            <SidebarCategory title="Organization" collapsed={isSidebarCollapsed} />
+            <SidebarItem icon={LucideBriefcase} label="HR & Team" active={activeTab === 'HR & Team'} onClick={() => setActiveTab('HR & Team')} isDarkMode={isDarkMode} collapsed={isSidebarCollapsed} />
+
+            <SidebarCategory title="Service" collapsed={isSidebarCollapsed} />
+            <SidebarItem icon={LucideCalendar} label="Appointments" active={activeTab === 'Appointments'} onClick={() => setActiveTab('Appointments')} isDarkMode={isDarkMode} collapsed={isSidebarCollapsed} />
+            <SidebarItem icon={LucideClipboardList} label="Job Cards" active={activeTab === 'Job Cards'} onClick={() => setActiveTab('Job Cards')} isDarkMode={isDarkMode} collapsed={isSidebarCollapsed} />
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className={`p-4 border-t ${borderClass}`}>
+            {!isSidebarCollapsed && (
+                <div className={`flex items-center gap-3 p-3 mb-4 rounded-xl border transition-all duration-300 hover:scale-[1.02] cursor-pointer group ${isDarkMode ? 'bg-white/5 border-white/5 hover:border-[#D4AF37]/50' : 'bg-white/50 border-black/5 hover:border-[#003366]/30'}`}>
+                    <div className="relative">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-gray-400 to-gray-200 p-[1px]">
+                             <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User" className="rounded-full bg-black" />
+                        </div>
+                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-black"></div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="text-[11px] font-bold truncate">Habibi Admin</div>
+                        <div className="text-[9px] opacity-50 truncate">admin@forexzig.com</div>
+                    </div>
+                    <LucideLogOut size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+            )}
+            
+            {/* Collapse Toggle */}
+            <button 
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className={`w-full flex items-center justify-center p-2 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
+            >
+                {isSidebarCollapsed ? <LucideChevronRight size={16} /> : <LucideChevronLeft size={16} />}
+            </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 z-10 flex flex-col min-w-0 h-full relative">
+        
+        {/* Top Navigation */}
+        <header className={`h-20 flex-shrink-0 flex items-center justify-between px-10 border-b backdrop-blur-xl transition-colors duration-700 ${borderClass} ${navBg}`}>
+            <div className="flex items-center gap-4">
+                <button className="lg:hidden opacity-70 hover:opacity-100"><LucideMenu size={20} /></button>
+                <div className="flex items-center gap-2 text-xs font-medium tracking-wide opacity-60">
+                    <span className="uppercase tracking-widest">System</span>
+                    <span className="opacity-30">/</span>
+                    <span className={`${isDarkMode ? 'text-white' : 'text-[#003366]'} opacity-100 font-bold`}>{activeTab}</span>
+                </div>
+            </div>
+
+            <div className="flex items-center gap-8 relative">
+                {/* Search */}
+                <div className={`hidden md:flex group items-center gap-3 px-4 py-2.5 rounded-full border transition-all duration-300 w-64 focus-within:w-80 ${isDarkMode ? 'bg-white/5 border-white/10 focus-within:border-[#D4AF37]/50' : 'bg-white border-black/5 focus-within:border-[#003366]/30 shadow-sm'}`}>
+                    <LucideSearch size={14} className="opacity-40 group-focus-within:opacity-100 transition-opacity" />
+                    <input 
+                        type="text" 
+                        placeholder="Search Intelligence..." 
+                        className="bg-transparent border-none outline-none text-xs w-full placeholder-current opacity-60 focus:opacity-100"
+                    />
+                </div>
+
+                <div className="h-4 w-[1px] bg-current opacity-10 hidden md:block" />
+
+                <button className={`hidden md:flex items-center gap-2 text-[10px] font-bold tracking-widest px-4 py-2 rounded-lg transition-all ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}>
+                    <LucidePlus size={14} />
+                    <span>QUICK ADD</span>
+                </button>
+
+                <div className="flex items-center gap-4">
+                    {/* Theme Toggle */}
+                    <button 
+                        onClick={() => setIsDarkMode(!isDarkMode)} 
+                        title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                        className={`p-2.5 rounded-full transition-all duration-500 hover:rotate-12 ${isDarkMode ? 'bg-white/10 hover:bg-[#D4AF37] hover:text-black' : 'bg-black/5 hover:bg-[#003366] hover:text-white'}`}
+                    >
+                        {isDarkMode ? <LucideSun size={16} /> : <LucideMoon size={16} />}
+                    </button>
+                    
+                    {/* Notification Bell */}
+                    <button 
+                        onClick={() => setShowNotifications(!showNotifications)}
+                        className={`relative p-2.5 rounded-full transition-all duration-300 ${isDarkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-black/5 hover:bg-black/10'}`}
+                    >
+                        <LucideBell size={16} />
+                        <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                    </button>
+                    
+                    {/* Notification Panel */}
+                    <NotificationPanel 
+                        isOpen={showNotifications} 
+                        isDarkMode={isDarkMode} 
+                        notifications={data ? data.notifications : []}
+                        onClose={() => setShowNotifications(false)}
+                    />
+                </div>
+            </div>
+        </header>
+
+        {/* Dashboard Content */}
+        <div className="flex-1 overflow-y-auto p-10 scrollbar-hide">
+            {data ? (
+                <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    
+                    {/* Welcome / Date */}
+                    <div className="flex justify-between items-end">
+                        <div>
+                            <h1 className={`text-3xl font-serif mb-2 ${isDarkMode ? 'text-white' : 'text-[#003366]'}`}>Executive Overview</h1>
+                            <p className="text-xs opacity-50 tracking-wide">Real-time dealer performance metrics.</p>
+                        </div>
+                        <div className={`px-4 py-2 rounded-lg border text-xs font-mono opacity-60 ${borderClass}`}>
+                            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        </div>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                        <StatPanel 
+                            title={data.stats.revenue.label} 
+                            value={data.stats.revenue.value} 
+                            sub="vs last month" 
+                            trend={data.stats.revenue.trend} 
+                            isDarkMode={isDarkMode} 
+                        />
+                        <StatPanel 
+                            title={data.stats.leads.label} 
+                            value={data.stats.leads.value} 
+                            sub="vs last month" 
+                            trend={data.stats.leads.trend} 
+                            isDarkMode={isDarkMode} 
+                        />
+                        <StatPanel 
+                            title={data.stats.sold.label} 
+                            value={data.stats.sold.value} 
+                            sub="vs last month" 
+                            trend={data.stats.sold.trend} 
+                            isDarkMode={isDarkMode} 
+                        />
+                        <StatPanel 
+                            title={data.stats.bookings.label} 
+                            value={data.stats.bookings.value} 
+                            sub="vs last month" 
+                            trend={data.stats.bookings.trend} 
+                            isDarkMode={isDarkMode} 
+                        />
+                    </div>
+
+                    {/* Charts Row */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-96">
+                        
+                        {/* Main Line Chart */}
+                        <div className={`lg:col-span-2 relative p-8 rounded-2xl border backdrop-blur-xl flex flex-col ${borderClass} ${isDarkMode ? 'bg-[#0a0a0a]/40' : 'bg-white/60 shadow-xl shadow-blue-900/5'}`}>
+                            <div className="flex justify-between items-center mb-8 z-10">
+                                <div>
+                                    <h2 className={`text-lg font-serif mb-1 ${isDarkMode ? 'text-white' : 'text-[#003366]'}`}>Sales Performance</h2>
+                                    <p className="text-[10px] font-mono uppercase tracking-widest opacity-40">Revenue vs Leads</p>
+                                </div>
+                                <button className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-medium hover:bg-current hover:bg-opacity-5 transition-colors ${borderClass}`}>
+                                    <span>This Year</span>
+                                    <LucideChevronDown size={12} />
+                                </button>
+                            </div>
+                            <div className="flex-1 min-h-0">
+                                <ElegantLineChart isDarkMode={isDarkMode} dataPoints={data.salesCurve} />
+                            </div>
+                        </div>
+
+                        {/* Donut Chart */}
+                        <div className={`p-8 rounded-2xl border backdrop-blur-xl flex flex-col ${borderClass} ${isDarkMode ? 'bg-[#0a0a0a]/40' : 'bg-white/60 shadow-xl shadow-blue-900/5'}`}>
+                            <div className="mb-4">
+                                <h2 className={`text-lg font-serif mb-1 ${isDarkMode ? 'text-white' : 'text-[#003366]'}`}>Inventory Status</h2>
+                                <p className="text-[10px] font-mono uppercase tracking-widest opacity-40">Stock Distribution</p>
+                            </div>
+                            
+                            <div className="flex-1 flex items-center justify-center">
+                                <LuxuryDonutChart isDarkMode={isDarkMode} data={data.inventory} />
+                            </div>
+
+                            <div className="space-y-4 mt-4">
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="opacity-60 uppercase tracking-wider text-[10px]">In Stock</span>
+                                    <span className="font-bold font-mono">{data.inventory.inStock}%</span>
+                                </div>
+                                <div className="w-full h-[1px] bg-current opacity-5" />
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="opacity-60 uppercase tracking-wider text-[10px]">Booked</span>
+                                    <span className="font-bold font-mono">{data.inventory.booked}%</span>
+                                </div>
+                                <div className="w-full h-[1px] bg-current opacity-5" />
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="opacity-60 uppercase tracking-wider text-[10px]">In Transit</span>
+                                    <span className="font-bold font-mono">{data.inventory.transit}%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            ) : (
+                <div className="flex items-center justify-center h-full">
+                    <div className="animate-pulse flex flex-col items-center gap-4 opacity-50">
+                        <div className={`w-12 h-12 rounded-full border-2 border-t-transparent animate-spin ${isDarkMode ? 'border-[#D4AF37]' : 'border-[#003366]'}`} />
+                        <span className="text-xs tracking-[0.2em] uppercase">Initializing Core...</span>
+                    </div>
+                </div>
+            )}
+        </div>
+
+      </main>
+    </div>
+  );
+}

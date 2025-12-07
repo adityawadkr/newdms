@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -47,25 +48,87 @@ interface Quotation {
   approvalStatus?: string
 }
 
-// --- Mock Data for Builder ---
+// --- Vehicle Models for Builder (50+ Popular Indian Cars) ---
 const VEHICLE_MODELS = [
-  { id: "nexon", name: "Tata Nexon", basePrice: 800000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/141867/nexon-exterior-right-front-three-quarter-71.jpeg?isig=0&q=80" },
-  { id: "harrier", name: "Tata Harrier", basePrice: 1500000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/142739/harrier-exterior-right-front-three-quarter-4.jpeg?isig=0&q=80" },
-  { id: "safari", name: "Tata Safari", basePrice: 1600000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/142739/harrier-exterior-right-front-three-quarter-4.jpeg?isig=0&q=80" },
+  // Maruti Suzuki
+  { id: "swift", name: "Maruti Suzuki Swift", basePrice: 639000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/159099/swift-exterior-right-front-three-quarter.jpeg" },
+  { id: "baleno", name: "Maruti Suzuki Baleno", basePrice: 679000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/143401/baleno-exterior-right-front-three-quarter.jpeg" },
+  { id: "dzire", name: "Maruti Suzuki Dzire", basePrice: 674000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/160307/dzire-exterior-right-front-three-quarter.jpeg" },
+  { id: "brezza", name: "Maruti Suzuki Brezza", basePrice: 849000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/102737/brezza-exterior-right-front-three-quarter-7.jpeg" },
+  { id: "grandvitara", name: "Maruti Suzuki Grand Vitara", basePrice: 1099000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/105263/grand-vitara-exterior-right-front-three-quarter.jpeg" },
+  { id: "ertiga", name: "Maruti Suzuki Ertiga", basePrice: 879000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/144411/ertiga-exterior-right-front-three-quarter.jpeg" },
+  { id: "wagonr", name: "Maruti Suzuki Wagon R", basePrice: 554000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/135591/wagon-r-exterior-right-front-three-quarter-5.jpeg" },
+  { id: "fronx", name: "Maruti Suzuki Fronx", basePrice: 769000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/118437/fronx-exterior-right-front-three-quarter.jpeg" },
+  { id: "jimny", name: "Maruti Suzuki Jimny", basePrice: 1274000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/112423/jimny-exterior-right-front-three-quarter.jpeg" },
+  // Hyundai
+  { id: "creta", name: "Hyundai Creta", basePrice: 1100000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/106815/creta-exterior-right-front-three-quarter.jpeg" },
+  { id: "venue", name: "Hyundai Venue", basePrice: 779000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/141113/venue-exterior-right-front-three-quarter.jpeg" },
+  { id: "i20", name: "Hyundai i20", basePrice: 719000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/150543/i20-exterior-right-front-three-quarter.jpeg" },
+  { id: "verna", name: "Hyundai Verna", basePrice: 1093000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/119825/verna-exterior-right-front-three-quarter.jpeg" },
+  { id: "alcazar", name: "Hyundai Alcazar", basePrice: 1691000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/106835/alcazar-exterior-right-front-three-quarter.jpeg" },
+  { id: "tucson", name: "Hyundai Tucson", basePrice: 2950000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/97440/tucson-exterior-right-front-three-quarter-25.jpeg" },
+  { id: "exter", name: "Hyundai Exter", basePrice: 608000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/118797/exter-exterior-right-front-three-quarter.jpeg" },
+  // Tata
+  { id: "nexon", name: "Tata Nexon", basePrice: 800000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/132921/nexon-exterior-right-front-three-quarter.jpeg" },
+  { id: "punch", name: "Tata Punch", basePrice: 610000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/149660/punch-exterior-right-front-three-quarter.jpeg" },
+  { id: "harrier", name: "Tata Harrier", basePrice: 1500000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/138063/harrier-exterior-right-front-three-quarter.jpeg" },
+  { id: "safari", name: "Tata Safari", basePrice: 1600000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/138062/safari-exterior-right-front-three-quarter.jpeg" },
+  { id: "tiago", name: "Tata Tiago", basePrice: 550000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/137393/tiago-exterior-right-front-three-quarter.jpeg" },
+  { id: "altroz", name: "Tata Altroz", basePrice: 670000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/115943/altroz-exterior-right-front-three-quarter.jpeg" },
+  { id: "curvv", name: "Tata Curvv", basePrice: 1000000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/159093/curvv-exterior-right-front-three-quarter.jpeg" },
+  // Mahindra
+  { id: "thar", name: "Mahindra Thar", basePrice: 1100000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/140855/thar-exterior-right-front-three-quarter.jpeg" },
+  { id: "xuv700", name: "Mahindra XUV700", basePrice: 1399000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/124919/xuv700-exterior-right-front-three-quarter.jpeg" },
+  { id: "scorpion", name: "Mahindra Scorpio N", basePrice: 1385000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/103178/scorpio-n-exterior-right-front-three-quarter-2.jpeg" },
+  { id: "xuv3xo", name: "Mahindra XUV 3XO", basePrice: 787000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/132023/xuv-3xo-exterior-right-front-three-quarter.jpeg" },
+  { id: "tharroxx", name: "Mahindra Thar Roxx", basePrice: 1299000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/152867/thar-roxx-exterior-right-front-three-quarter.jpeg" },
+  // Kia
+  { id: "seltos", name: "Kia Seltos", basePrice: 1099000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/144999/seltos-exterior-right-front-three-quarter.jpeg" },
+  { id: "sonet", name: "Kia Sonet", basePrice: 799000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/117015/sonet-exterior-right-front-three-quarter-2.jpeg" },
+  { id: "carens", name: "Kia Carens", basePrice: 1070000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/106253/carens-exterior-right-front-three-quarter-2.jpeg" },
+  { id: "ev6", name: "Kia EV6", basePrice: 6095000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/99217/ev6-exterior-right-front-three-quarter.jpeg" },
+  // Toyota
+  { id: "fortuner", name: "Toyota Fortuner", basePrice: 3500000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/115025/fortuner-exterior-right-front-three-quarter.jpeg" },
+  { id: "innovacrysta", name: "Toyota Innova Crysta", basePrice: 1957000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/51435/innova-crysta-exterior-right-front-three-quarter.jpeg" },
+  { id: "innovahycross", name: "Toyota Innova Hycross", basePrice: 1992000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/103867/innova-hycross-exterior-right-front-three-quarter.jpeg" },
+  { id: "hyryder", name: "Toyota Urban Cruiser Hyryder", basePrice: 1102000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/102473/urban-cruiser-hyryder-exterior-right-front-three-quarter.jpeg" },
+  // Honda
+  { id: "city", name: "Honda City", basePrice: 1200000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/134287/city-exterior-right-front-three-quarter.jpeg" },
+  { id: "amaze", name: "Honda Amaze", basePrice: 799000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/166653/amaze-exterior-right-front-three-quarter.jpeg" },
+  { id: "elevate", name: "Honda Elevate", basePrice: 1110000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/119195/elevate-exterior-right-front-three-quarter.jpeg" },
+  // MG
+  { id: "hector", name: "MG Hector", basePrice: 1400000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/130583/hector-exterior-right-front-three-quarter.jpeg" },
+  { id: "astor", name: "MG Astor", basePrice: 1098000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/94893/astor-exterior-right-front-three-quarter-2.jpeg" },
+  { id: "zsev", name: "MG ZS EV", basePrice: 1898000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/126041/zs-ev-exterior-right-front-three-quarter.jpeg" },
+  // Volkswagen & Skoda
+  { id: "taigun", name: "Volkswagen Taigun", basePrice: 1170000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/144681/taigun-exterior-right-front-three-quarter.jpeg" },
+  { id: "virtus", name: "Volkswagen Virtus", basePrice: 1184000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/98573/virtus-exterior-right-front-three-quarter.jpeg" },
+  { id: "kushaq", name: "Skoda Kushaq", basePrice: 1134000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/144451/kushaq-exterior-right-front-three-quarter.jpeg" },
+  { id: "slavia", name: "Skoda Slavia", basePrice: 1129000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/98609/slavia-exterior-right-front-three-quarter.jpeg" },
+  // Renault & Nissan
+  { id: "kiger", name: "Renault Kiger", basePrice: 609000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/137671/kiger-exterior-right-front-three-quarter.jpeg" },
+  { id: "magnite", name: "Nissan Magnite", basePrice: 600000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/94947/magnite-exterior-right-front-three-quarter.jpeg" },
+  // Jeep
+  { id: "compass", name: "Jeep Compass", basePrice: 1896000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/133457/compass-exterior-right-front-three-quarter.jpeg" },
+  // Citroen
+  { id: "c3", name: "Citroen C3", basePrice: 624000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/101669/c3-exterior-right-front-three-quarter-7.jpeg" },
+  { id: "basalt", name: "Citroen Basalt", basePrice: 799000, image: "https://imgd.aeplcdn.com/664x374/n/cw/ec/152499/basalt-exterior-right-front-three-quarter.jpeg" },
 ]
 
 const VARIANTS = [
-  { id: "smart", name: "Smart", priceMod: 0 },
-  { id: "pure", name: "Pure", priceMod: 100000 },
-  { id: "creative", name: "Creative", priceMod: 250000 },
-  { id: "fearless", name: "Fearless", priceMod: 400000 },
+  { id: "base", name: "Base", priceMod: 0 },
+  { id: "mid", name: "Mid", priceMod: 100000 },
+  { id: "top", name: "Top", priceMod: 250000 },
+  { id: "topplus", name: "Top+", priceMod: 400000 },
 ]
 
 const COLORS = [
-  { id: "white", name: "Calgary White", hex: "#f3f4f6" },
-  { id: "grey", name: "Daytona Grey", hex: "#4b5563" },
+  { id: "white", name: "Pearl White", hex: "#f3f4f6" },
+  { id: "grey", name: "Titanium Grey", hex: "#4b5563" },
+  { id: "black", name: "Midnight Black", hex: "#1f2937" },
   { id: "red", name: "Flame Red", hex: "#ef4444" },
   { id: "blue", name: "Royal Blue", hex: "#3b82f6" },
+  { id: "silver", name: "Silky Silver", hex: "#9ca3af" },
 ]
 
 const ACCESSORY_BUNDLES = [
@@ -76,6 +139,7 @@ const ACCESSORY_BUNDLES = [
 ]
 
 export default function QuotationsPage() {
+  const router = useRouter()
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [builderOpen, setBuilderOpen] = useState(false)
   const [emailOpen, setEmailOpen] = useState(false)
@@ -169,6 +233,7 @@ export default function QuotationsPage() {
     if (!selectedQuotation) return
     const res = await fetch(`/api/sales/quotations/${selectedQuotation.id}/send`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: emailAddress })
     })
     if (res.ok) {
@@ -178,6 +243,10 @@ export default function QuotationsPage() {
     } else {
       toast.error("Failed to send email")
     }
+  }
+
+  function handlePrint(quotationId: number) {
+    router.push(`/sales/quotations/print?id=${quotationId}`)
   }
 
   const handleWhatsAppShare = () => {
@@ -198,11 +267,11 @@ export default function QuotationsPage() {
               <Plus className="mr-2 h-4 w-4" /> New Quotation
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-[98vw] w-[98vw] h-[95vh] sm:max-w-[98vw] p-0 gap-0 overflow-hidden flex flex-col md:flex-row bg-white border-zinc-200 sm:rounded-xl shadow-2xl">
+          <DialogContent className="max-w-[98vw] w-[98vw] max-h-[90vh] sm:max-w-[98vw] p-0 gap-0 overflow-hidden flex flex-col md:flex-row bg-white border-zinc-200 sm:rounded-xl shadow-2xl">
 
             {/* LEFT PANEL: BUILDER */}
-            <div className="flex-[3] p-8 overflow-y-auto border-r border-zinc-100 bg-white relative">
-              <div className="max-w-5xl mx-auto space-y-8 h-full flex flex-col">
+            <div className="flex-[3] p-6 md:p-8 overflow-y-auto border-r border-zinc-100 bg-white relative max-h-[90vh]">
+              <div className="max-w-5xl mx-auto space-y-6 flex flex-col">
                 <div className="flex items-center justify-between shrink-0">
                   <div>
                     <h2 className="text-3xl font-bold tracking-tight text-zinc-900">Configure Vehicle</h2>
@@ -356,17 +425,18 @@ export default function QuotationsPage() {
             </div>
 
             {/* RIGHT PANEL: PROPOSAL */}
-            <div className="flex-1 min-w-[450px] max-w-[500px] bg-zinc-50/80 backdrop-blur-xl p-8 flex flex-col border-l border-zinc-200 shadow-2xl z-30 relative">
+            <div className="flex-1 min-w-[350px] md:min-w-[450px] max-w-[500px] bg-zinc-50/80 backdrop-blur-xl flex flex-col border-l border-zinc-200 shadow-2xl z-30 relative max-h-[90vh]">
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900"
+                className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900 z-10"
                 onClick={() => setBuilderOpen(false)}
               >
                 <X className="h-6 w-6" />
               </Button>
 
-              <div className="flex-1 space-y-8 mt-8">
+              {/* Scrollable content area */}
+              <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 mt-8">
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Proposal Summary</h2>
                   <p className="text-sm text-zinc-500 mt-1">Real-time on-road price calculation.</p>
@@ -485,13 +555,14 @@ export default function QuotationsPage() {
                 </div>
               </div>
 
-              <div className="pt-8 space-y-4 mt-auto">
-                <Button className="w-full h-14 text-lg font-bold bg-zinc-900 hover:bg-zinc-800 shadow-xl shadow-zinc-900/10 transition-all hover:scale-[1.02] rounded-xl" onClick={createQuotation}>
+              {/* Fixed button footer */}
+              <div className="shrink-0 p-6 border-t border-zinc-200 bg-zinc-50/95 backdrop-blur-sm space-y-3">
+                <Button className="w-full h-12 text-base font-bold bg-zinc-900 hover:bg-zinc-800 text-white shadow-xl shadow-zinc-900/10 transition-all hover:scale-[1.01] rounded-xl" onClick={createQuotation}>
                   {approvalRequired ? <Lock className="mr-2 h-5 w-5" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
                   {approvalRequired ? "Submit for Approval" : "Create Quotation"}
                 </Button>
-                <Button variant="outline" className="w-full h-14 text-base font-medium border-zinc-200 hover:bg-zinc-50 hover:text-zinc-900 rounded-xl" onClick={handleWhatsAppShare}>
-                  <Share2 className="mr-2 h-5 w-5" /> Share on WhatsApp
+                <Button variant="outline" className="w-full h-10 text-sm font-medium border-zinc-200 hover:bg-zinc-50 hover:text-zinc-900 rounded-xl" onClick={handleWhatsAppShare}>
+                  <Share2 className="mr-2 h-4 w-4" /> Share on WhatsApp
                 </Button>
               </div>
             </div>
@@ -510,6 +581,7 @@ export default function QuotationsPage() {
                 setSelectedQuotation(quotation)
                 setEmailOpen(true)
               }}
+              onPrint={() => handlePrint(quotation.id)}
             />
           ))}
         </div>
@@ -536,7 +608,7 @@ export default function QuotationsPage() {
   )
 }
 
-function QuotationCard({ quotation, onSendEmail }: { quotation: Quotation, onSendEmail: () => void }) {
+function QuotationCard({ quotation, onSendEmail, onPrint }: { quotation: Quotation, onSendEmail: () => void, onPrint: () => void }) {
   const isPending = quotation.approvalStatus === "Pending"
 
   return (
@@ -572,7 +644,7 @@ function QuotationCard({ quotation, onSendEmail }: { quotation: Quotation, onSen
       </div>
 
       <div className="flex gap-3 mt-auto pt-4 border-t border-zinc-50">
-        <Button size="sm" variant="outline" className="flex-1 h-9 text-xs font-medium border-zinc-200 hover:bg-zinc-50 hover:text-zinc-900" onClick={() => window.print()}>
+        <Button size="sm" variant="outline" className="flex-1 h-9 text-xs font-medium border-zinc-200 hover:bg-zinc-50 hover:text-zinc-900" onClick={onPrint}>
           <Printer className="mr-2 h-3.5 w-3.5" /> Print
         </Button>
         <Button size="sm" variant="outline" className="flex-1 h-9 text-xs font-medium border-zinc-200 hover:bg-zinc-50 hover:text-zinc-900" onClick={onSendEmail}>

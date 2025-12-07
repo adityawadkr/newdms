@@ -3,6 +3,30 @@ import { quotations } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
+// GET single quotation by ID
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const { id } = await params;
+
+        if (!id) {
+            return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+        }
+
+        const [quotation] = await db.select()
+            .from(quotations)
+            .where(eq(quotations.id, Number(id)))
+            .limit(1);
+
+        if (!quotation) {
+            return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({ data: quotation });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;

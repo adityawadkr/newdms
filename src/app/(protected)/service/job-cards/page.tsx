@@ -1,7 +1,6 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -10,8 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { CheckCircle2, FileText, Plus, Trash2, Calculator } from "lucide-react"
-import { Separator } from "@/components/ui/separator"
+import { CheckCircle2, FileText, Trash2, Calculator, Wrench, User, Clock, IndianRupee } from "lucide-react"
+import { useTheme } from "next-themes"
 
 interface JobCard {
   id: number
@@ -19,7 +18,7 @@ interface JobCard {
   technician: string
   status: string
   notes: string
-  partsData: string // JSON string
+  partsData: string
   laborCharges: number
   totalAmount: number
   invoiceStatus: string
@@ -42,6 +41,8 @@ interface SelectedPart {
 }
 
 export default function JobCardsPage() {
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
   const [jobCards, setJobCards] = useState<JobCard[]>([])
   const [parts, setParts] = useState<Part[]>([])
   const [loading, setLoading] = useState(true)
@@ -81,7 +82,6 @@ export default function JobCardsPage() {
     }
   }
 
-  // Initialize form when job selected
   useEffect(() => {
     if (selectedJob) {
       setStatus(selectedJob.status)
@@ -89,7 +89,7 @@ export default function JobCardsPage() {
       setLaborCharges(selectedJob.laborCharges || 0)
       try {
         setSelectedParts(selectedJob.partsData ? JSON.parse(selectedJob.partsData) : [])
-      } catch (e) {
+      } catch {
         setSelectedParts([])
       }
     }
@@ -109,11 +109,6 @@ export default function JobCardsPage() {
 
   const removePart = (partId: number) => {
     setSelectedParts(selectedParts.filter(p => p.partId !== partId))
-  }
-
-  const updateQuantity = (partId: number, qty: number) => {
-    if (qty < 1) return
-    setSelectedParts(selectedParts.map(p => p.partId === partId ? { ...p, quantity: qty } : p))
   }
 
   const totalPartsCost = selectedParts.reduce((acc, p) => acc + (p.price * p.quantity), 0)
@@ -147,50 +142,125 @@ export default function JobCardsPage() {
     }
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusStyle = (status: string) => {
     switch (status) {
-      case "Completed": return "bg-emerald-500"
-      case "In Progress": return "bg-blue-500"
-      default: return "bg-slate-500"
+      case "Completed": return isDark ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-emerald-50 text-emerald-600 border-emerald-200"
+      case "In Progress": return isDark ? "bg-blue-500/20 text-blue-400 border-blue-500/30" : "bg-blue-50 text-blue-600 border-blue-200"
+      case "Waiting for Parts": return isDark ? "bg-amber-500/20 text-amber-400 border-amber-500/30" : "bg-amber-50 text-amber-600 border-amber-200"
+      default: return isDark ? "bg-zinc-800 text-zinc-400" : "bg-zinc-100 text-zinc-600"
     }
   }
 
+  const inProgress = jobCards.filter(j => j.status === "In Progress").length
+  const completed = jobCards.filter(j => j.status === "Completed").length
+  const totalRevenue = jobCards.reduce((acc, j) => acc + (j.totalAmount || 0), 0)
+
   return (
     <div className="space-y-6 p-6">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">My Job Cards</h1>
-        <p className="text-muted-foreground">View and manage your assigned service jobs.</p>
+        <h1 className={`text-2xl font-bold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>
+          Job Cards
+        </h1>
+        <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+          Manage service jobs and generate invoices
+        </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className={`p-4 rounded-xl border ${isDark ? "bg-white/[0.02] border-white/10" : "bg-white border-gray-200"}`}>
+          <div className={`text-xs uppercase tracking-wider mb-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}>Total Jobs</div>
+          <div className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>{jobCards.length}</div>
+        </div>
+        <div className={`p-4 rounded-xl border ${isDark ? "bg-white/[0.02] border-white/10" : "bg-white border-gray-200"}`}>
+          <div className={`text-xs uppercase tracking-wider mb-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}>In Progress</div>
+          <div className="text-2xl font-bold text-blue-500">{inProgress}</div>
+        </div>
+        <div className={`p-4 rounded-xl border ${isDark ? "bg-white/[0.02] border-white/10" : "bg-white border-gray-200"}`}>
+          <div className={`text-xs uppercase tracking-wider mb-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}>Completed</div>
+          <div className="text-2xl font-bold text-emerald-500">{completed}</div>
+        </div>
+        <div className={`p-4 rounded-xl border ${isDark ? "bg-white/[0.02] border-white/10" : "bg-white border-gray-200"}`}>
+          <div className={`text-xs uppercase tracking-wider mb-1 ${isDark ? "text-gray-500" : "text-gray-400"}`}>Revenue</div>
+          <div className={`text-2xl font-bold ${isDark ? "text-[#D4AF37]" : "text-green-600"}`}>₹{totalRevenue.toLocaleString('en-IN')}</div>
+        </div>
+      </div>
+
+      {/* Job Cards Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {jobCards.map((job) => (
-          <Card key={job.id} className="flex flex-col">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <Badge variant="outline" className="font-mono">{job.jobNo}</Badge>
-                <Badge className={getStatusColor(job.status)}>{job.status}</Badge>
+          <div
+            key={job.id}
+            className={`p-5 rounded-xl border transition-all hover:shadow-lg ${isDark
+              ? "bg-white/[0.02] border-white/10 hover:border-white/20"
+              : "bg-white border-gray-200 hover:border-gray-300"
+              }`}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <Badge variant="outline" className={`font-mono text-xs ${isDark ? "border-white/20" : ""}`}>
+                {job.jobNo}
+              </Badge>
+              <Badge className={`${getStatusStyle(job.status)} border`}>
+                {job.status}
+              </Badge>
+            </div>
+
+            {/* Technician */}
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`p-2 rounded-lg ${isDark ? "bg-white/5" : "bg-gray-100"}`}>
+                <User className={`h-4 w-4 ${isDark ? "text-[#D4AF37]" : "text-blue-600"}`} />
               </div>
-              <CardTitle className="mt-2">Service Request</CardTitle>
-              <CardDescription>Assigned to: {job.technician}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 space-y-4">
-              <div className="text-sm">
-                <span className="font-semibold block mb-1">Notes:</span>
-                <p className="text-muted-foreground line-clamp-2">{job.notes || "No notes provided."}</p>
+              <div>
+                <div className={`font-medium text-sm ${isDark ? "text-white" : "text-gray-900"}`}>{job.technician}</div>
+                <div className={`text-xs ${isDark ? "text-gray-500" : "text-gray-500"}`}>Assigned Technician</div>
               </div>
-              <div className="flex justify-between text-sm pt-2 border-t">
-                <span className="text-muted-foreground">Total Amount:</span>
-                <span className="font-bold">₹{job.totalAmount?.toLocaleString('en-IN') || 0}</span>
+            </div>
+
+            {/* Notes */}
+            <div className={`p-3 rounded-lg mb-4 ${isDark ? "bg-white/5" : "bg-gray-50"}`}>
+              <div className={`text-xs font-medium mb-1 ${isDark ? "text-gray-400" : "text-gray-500"}`}>Notes</div>
+              <p className={`text-sm line-clamp-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+                {job.notes || "No notes provided."}
+              </p>
+            </div>
+
+            {/* Amount */}
+            <div className={`flex items-center justify-between py-3 border-t ${isDark ? "border-white/10" : "border-gray-100"}`}>
+              <div className="flex items-center gap-2">
+                <IndianRupee className={`h-4 w-4 ${isDark ? "text-gray-500" : "text-gray-400"}`} />
+                <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>Total Amount</span>
               </div>
-            </CardContent>
-            <CardFooter>
+              <span className={`text-lg font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
+                ₹{(job.totalAmount || 0).toLocaleString('en-IN')}
+              </span>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 mt-3">
+              {job.status === "Completed" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`flex-1 ${isDark ? "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10" : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"}`}
+                  onClick={() => window.open(`/invoice/service?jobId=${job.id}`, '_blank')}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  View Invoice
+                </Button>
+              )}
               <Dialog open={dialogOpen && selectedJob?.id === job.id} onOpenChange={(open) => {
                 setDialogOpen(open)
                 if (open) setSelectedJob(job)
               }}>
                 <DialogTrigger asChild>
-                  <Button className="w-full" variant={job.status === "Completed" ? "outline" : "default"}>
-                    <FileText className="mr-2 h-4 w-4" /> {job.status === "Completed" ? "View Details" : "Update Job"}
+                  <Button
+                    className={`flex-1 ${job.status !== "Completed" && isDark ? "bg-[#D4AF37] text-black hover:bg-[#E5C158]" : ""}`}
+                    variant={job.status === "Completed" ? "outline" : "default"}
+                    size="sm"
+                  >
+                    {job.status === "Completed" ? "Details" : "Update Job"}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -198,7 +268,6 @@ export default function JobCardsPage() {
                     <DialogTitle>Job Card: {job.jobNo}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-6 py-4">
-
                     {/* Status & Notes */}
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
@@ -214,16 +283,19 @@ export default function JobCardsPage() {
                       </div>
                       <div className="space-y-2">
                         <Label>Technician Notes</Label>
-                        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Work done details..." disabled={job.status === "Completed"} />
+                        <Textarea
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                          placeholder="Work done details..."
+                          disabled={job.status === "Completed"}
+                        />
                       </div>
                     </div>
-
-                    <Separator />
 
                     {/* Parts Selection */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold">Spare Parts</h3>
+                        <h3 className={`text-sm font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>Spare Parts</h3>
                         {job.status !== "Completed" && (
                           <Select onValueChange={addPart}>
                             <SelectTrigger className="w-[200px]">
@@ -240,18 +312,18 @@ export default function JobCardsPage() {
                         )}
                       </div>
 
-                      <div className="border rounded-md p-4 space-y-3 bg-zinc-50/50">
+                      <div className={`border rounded-lg p-4 space-y-3 ${isDark ? "bg-white/[0.02] border-white/10" : "bg-gray-50 border-gray-200"}`}>
                         {selectedParts.length === 0 ? (
-                          <p className="text-sm text-muted-foreground text-center py-2">No parts added.</p>
+                          <p className={`text-sm text-center py-2 ${isDark ? "text-gray-500" : "text-gray-400"}`}>No parts added.</p>
                         ) : (
                           selectedParts.map((p, idx) => (
                             <div key={idx} className="flex items-center justify-between text-sm">
                               <div className="flex-1">
-                                <div className="font-medium">{p.name}</div>
-                                <div className="text-xs text-muted-foreground">₹{p.price} x {p.quantity}</div>
+                                <div className={`font-medium ${isDark ? "text-white" : "text-gray-900"}`}>{p.name}</div>
+                                <div className={`text-xs ${isDark ? "text-gray-500" : "text-gray-500"}`}>₹{p.price} × {p.quantity}</div>
                               </div>
                               <div className="flex items-center gap-3">
-                                <div className="font-medium">₹{p.price * p.quantity}</div>
+                                <div className={`font-medium ${isDark ? "text-white" : "text-gray-900"}`}>₹{p.price * p.quantity}</div>
                                 {job.status !== "Completed" && (
                                   <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => removePart(p.partId)}>
                                     <Trash2 className="h-3 w-3" />
@@ -264,11 +336,11 @@ export default function JobCardsPage() {
                       </div>
                     </div>
 
-                    <Separator />
-
                     {/* Billing */}
                     <div className="space-y-4">
-                      <h3 className="text-sm font-semibold flex items-center gap-2"><Calculator className="h-4 w-4" /> Billing</h3>
+                      <h3 className={`text-sm font-semibold flex items-center gap-2 ${isDark ? "text-white" : "text-gray-900"}`}>
+                        <Calculator className="h-4 w-4" /> Billing
+                      </h3>
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label>Labor Charges (₹)</Label>
@@ -281,32 +353,34 @@ export default function JobCardsPage() {
                         </div>
                         <div className="space-y-2">
                           <Label>Total Parts Cost</Label>
-                          <div className="h-10 flex items-center px-3 border rounded-md bg-muted text-muted-foreground">
-                            ₹{totalPartsCost}
+                          <div className={`h-10 flex items-center px-3 border rounded-md ${isDark ? "bg-white/5 border-white/10 text-gray-300" : "bg-gray-100 text-gray-700"}`}>
+                            ₹{totalPartsCost.toLocaleString('en-IN')}
                           </div>
                         </div>
                       </div>
-                      <div className="flex justify-between items-center p-4 bg-zinc-100 rounded-lg">
-                        <span className="font-bold text-lg">Grand Total</span>
-                        <span className="font-bold text-2xl text-emerald-600">₹{grandTotal.toLocaleString('en-IN')}</span>
+                      <div className={`flex justify-between items-center p-4 rounded-xl ${isDark ? "bg-emerald-500/10" : "bg-emerald-50"}`}>
+                        <span className={`font-bold text-lg ${isDark ? "text-white" : "text-gray-900"}`}>Grand Total</span>
+                        <span className="font-bold text-2xl text-emerald-500">₹{grandTotal.toLocaleString('en-IN')}</span>
                       </div>
                     </div>
 
                     {job.status !== "Completed" && (
-                      <Button onClick={updateJobCard} className="w-full mt-4" size="lg">
+                      <Button onClick={updateJobCard} className={`w-full ${isDark ? "bg-[#D4AF37] text-black hover:bg-[#E5C158]" : ""}`} size="lg">
                         {status === "Completed" ? "Complete Job & Generate Invoice" : "Update Job Card"}
                       </Button>
                     )}
                   </div>
                 </DialogContent>
               </Dialog>
-            </CardFooter>
-          </Card>
+            </div>
+          </div>
         ))}
+
         {jobCards.length === 0 && !loading && (
-          <div className="col-span-full flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <CheckCircle2 className="h-12 w-12 mb-4 opacity-20" />
-            <p>No job cards assigned.</p>
+          <div className={`col-span-full flex flex-col items-center justify-center py-16 ${isDark ? "text-gray-500" : "text-gray-400"}`}>
+            <Wrench className="h-12 w-12 mb-4 opacity-30" />
+            <p className="text-sm">No job cards assigned</p>
+            <p className={`text-xs mt-1 ${isDark ? "text-gray-600" : "text-gray-400"}`}>Create jobs from Appointments page</p>
           </div>
         )}
       </div>

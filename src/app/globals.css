@@ -6,17 +6,533 @@
 }
 
 :root {
-    --background: #ffffff;
+    --background: #F5F5F7;
     --foreground: #171717;
+    --accent: #003366;
+    --accent-light: #0055aa;
+    --accent-gold: #D4AF37;
+    --accent-gold-light: #E5C158;
+    --sidebar-background: #ffffff;
+    --sidebar-foreground: #171717;
+    --card-background: rgba(255, 255, 255, 0.95);
+    --card-border: rgba(0, 0, 0, 0.08);
+    --glow-color: rgba(0, 51, 102, 0.3);
 }
 
 .dark {
-    --background: #0a0a0a;
+    --background: #030303;
     --foreground: #ededed;
+    --accent: #D4AF37;
+    --accent-light: #E5C158;
+    --accent-gold: #D4AF37;
+    --accent-gold-light: #E5C158;
+    --sidebar-background: #050505;
+    --sidebar-foreground: #ededed;
+    --card-background: rgba(12, 12, 12, 0.95);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --glow-color: rgba(212, 175, 55, 0.3);
 }
 
 body {
     background: var(--background);
     color: var(--foreground);
     font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ===== PREMIUM ANIMATIONS ===== */
+
+/* Shimmer effect for loading states */
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.shimmer {
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+}
+
+/* Gradient animation for backgrounds */
+@keyframes gradient-shift {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+.animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 8s ease infinite;
+}
+
+/* Subtle float animation */
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-6px);
+    }
+}
+
+.animate-float {
+    animation: float 4s ease-in-out infinite;
+}
+
+/* Pulse glow for important elements */
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px var(--glow-color);
+    }
+
+    50% {
+        box-shadow: 0 0 40px var(--glow-color);
+    }
+}
+
+.animate-pulse-glow {
+    animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* Chart line drawing animation */
+@keyframes draw-line {
+    from {
+        stroke-dashoffset: 2000;
+    }
+
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+.animate-draw {
+    stroke-dasharray: 2000;
+    animation: draw-line 2s ease-out forwards;
+}
+
+/* Counter number animation */
+@keyframes count-up {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-count {
+    animation: count-up 0.6s ease-out forwards;
+}
+
+/* Fade slide in */
+@keyframes fade-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-up {
+    animation: fade-slide-up 0.5s ease-out forwards;
+}
+
+/* Staggered children animation */
+.stagger-children>* {
+    opacity: 0;
+    animation: fade-slide-up 0.5s ease-out forwards;
+}
+
+.stagger-children>*:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.stagger-children>*:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.stagger-children>*:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.stagger-children>*:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+.stagger-children>*:nth-child(5) {
+    animation-delay: 0.5s;
+}
+
+.stagger-children>*:nth-child(6) {
+    animation-delay: 0.6s;
+}
+
+/* ===== LUXURY CARD STYLES ===== */
+
+.luxury-card {
+    background: var(--card-background);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    backdrop-filter: blur(20px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.luxury-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -10px var(--glow-color);
+}
+
+.dark .luxury-card {
+    box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.5);
+}
+
+.dark .luxury-card:hover {
+    box-shadow: 0 20px 50px -10px rgba(212, 175, 55, 0.15);
+    border-color: rgba(212, 175, 55, 0.2);
+}
+
+/* ===== GLOW EFFECTS ===== */
+
+.glow-gold {
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+}
+
+.glow-blue {
+    box-shadow: 0 0 30px rgba(0, 51, 102, 0.3);
+}
+
+.text-glow {
+    text-shadow: 0 0 20px var(--glow-color);
+}
+
+/* ===== PREMIUM GRADIENTS ===== */
+
+.gradient-gold {
+    background: linear-gradient(135deg, #D4AF37 0%, #F5E6B2 50%, #D4AF37 100%);
+}
+
+.gradient-dark {
+    background: linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
+}
+
+.gradient-mesh-dark {
+    background:
+        radial-gradient(at 20% 80%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
+        radial-gradient(at 80% 20%, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
+        radial-gradient(at 40% 40%, rgba(30, 30, 30, 1) 0%, transparent 50%),
+        #030303;
+}
+
+.gradient-mesh-light {
+    background:
+        radial-gradient(at 0% 100%, rgba(0, 51, 102, 0.05) 0%, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(0, 51, 102, 0.03) 0%, transparent 50%),
+        #F5F5F7;
+}
+
+/* ===== SCROLLBAR STYLING ===== */
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.scrollbar-luxury::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scrollbar-luxury::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollbar-luxury::-webkit-scrollbar-thumb {
+    background: var(--card-border);
+    border-radius: 3px;
+}
+
+.scrollbar-luxury::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+
+/* ===== SMOOTH TRANSITIONS ===== */
+
+* {
+    transition-property: background-color, border-color, box-shadow;
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Exclude specific elements from transition */
+svg,
+svg *,
+canvas,
+video,
+img,
+.no-transition {
+    transition: none !important;
+}
+
+/* ===== TYPOGRAPHY ENHANCEMENTS ===== */
+
+.font-luxury {
+    font-family: 'Playfair Display', Georgia, serif;
+    letter-spacing: -0.02em;
+}
+
+.font-mono-luxury {
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    letter-spacing: -0.01em;
+}
+
+/* Number tabular for proper alignment */
+.tabular-nums {
+    font-variant-numeric: tabular-nums;
+}
+
+/* ===== CHART SPECIFIC STYLES ===== */
+
+.chart-tooltip {
+    backdrop-filter: blur(12px);
+    background: var(--card-background);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+}
+
+.chart-glow-line {
+    filter: drop-shadow(0 0 8px var(--accent));
+}
+
+.dark .chart-glow-line {
+    filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.6));
+}
+
+/* ===== DARK MODE OVERRIDES FOR LEGACY PAGES ===== */
+
+/* Fix white/light backgrounds in dark mode */
+.dark .bg-white,
+.dark .bg-zinc-50,
+.dark .bg-zinc-50\/50,
+.dark .bg-zinc-100 {
+    background-color: rgba(15, 15, 15, 0.95) !important;
+}
+
+.dark .bg-white\/80,
+.dark .bg-white\/90 {
+    background-color: rgba(15, 15, 15, 0.8) !important;
+}
+
+/* Fix borders in dark mode */
+.dark .border-zinc-100,
+.dark .border-zinc-200,
+.dark .border-zinc-50 {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Fix text colors in dark mode */
+.dark .text-zinc-900 {
+    color: #ededed !important;
+}
+
+.dark .text-zinc-800,
+.dark .text-zinc-700 {
+    color: #d4d4d4 !important;
+}
+
+.dark .text-zinc-600,
+.dark .text-zinc-500 {
+    color: #a1a1aa !important;
+}
+
+.dark .text-zinc-400 {
+    color: #71717a !important;
+}
+
+/* Fix hover states in dark mode */
+.dark .hover\:bg-zinc-50:hover,
+.dark .hover\:bg-zinc-100:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark .hover\:bg-white:hover {
+    background-color: rgba(30, 30, 30, 0.95) !important;
+}
+
+/* Fix shadows in dark mode */
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg {
+    box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Fix card-like elements in dark mode */
+.dark [class*="bg-white"] [class*="bg-zinc"] {
+    background-color: rgba(25, 25, 25, 0.8) !important;
+}
+
+/* Fix red backgrounds for alerts/errors in dark mode */
+.dark .bg-red-50,
+.dark .bg-red-50\/50 {
+    background-color: rgba(127, 29, 29, 0.15) !important;
+}
+
+.dark .border-red-100,
+.dark .border-red-200 {
+    border-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+/* Fix button styles in dark mode */
+.dark .bg-zinc-900 {
+    background-color: #D4AF37 !important;
+    color: #000 !important;
+}
+
+.dark .bg-zinc-900:hover,
+.dark .hover\:bg-zinc-800:hover {
+    background-color: #E5C158 !important;
+}
+
+/* Fix dropdown/select in dark mode */
+.dark [data-radix-popper-content-wrapper]>div {
+    background-color: #1a1a1a !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Fix input fields in dark mode */
+.dark input:not([type="range"]),
+.dark textarea,
+.dark select {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ededed !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+    color: #71717a !important;
+}
+
+/* Fix dialog/modal in dark mode */
+.dark [role="dialog"] {
+    background-color: #0a0a0a !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Fix table in dark mode */
+.dark table {
+    background-color: transparent !important;
+}
+
+.dark th {
+    background-color: rgba(255, 255, 255, 0.02) !important;
+    color: #a1a1aa !important;
+}
+
+.dark td {
+    border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dark tr:hover td {
+    background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Fix badge variants in dark mode */
+.dark .bg-emerald-50,
+.dark .bg-green-50 {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+}
+
+.dark .bg-amber-50,
+.dark .bg-yellow-50 {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+}
+
+.dark .bg-blue-50 {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+.dark .bg-purple-50 {
+    background-color: rgba(168, 85, 247, 0.15) !important;
+}
+
+/* Fix scrollbar in dark mode */
+.dark .scrollbar-thin::-webkit-scrollbar-thumb,
+.dark .scrollbar-thumb-zinc-200::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Fix focus rings in dark mode */
+.dark .focus\:ring-zinc-900:focus,
+.dark .focus\:border-zinc-900:focus {
+    border-color: #D4AF37 !important;
+    ring-color: rgba(212, 175, 55, 0.3) !important;
+}
+
+/* Make sure main content area adapts */
+.dark main {
+    background-color: #030303 !important;
+}
+
+/* ===== DIALOG/FORM STYLING - FIX GLASS EFFECT ===== */
+/* Remove blur/glass from dialogs and use solid backgrounds */
+
+[data-slot="dialog-content"],
+[role="dialog"],
+.dialog-content {
+    background-color: var(--card-background) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid var(--card-border) !important;
+}
+
+.dark [data-slot="dialog-content"],
+.dark [role="dialog"],
+.dark .dialog-content {
+    background-color: #1A1A1A !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Dialog overlay - darker and no blur */
+[data-slot="dialog-overlay"] {
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    backdrop-filter: none !important;
+}
+
+/* Select dropdowns - solid background */
+[data-slot="select-content"],
+[role="listbox"] {
+    background-color: var(--card-background) !important;
+    backdrop-filter: none !important;
+}
+
+.dark [data-slot="select-content"],
+.dark [role="listbox"] {
+    background-color: #1A1A1A !important;
 }

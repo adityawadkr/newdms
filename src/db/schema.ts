@@ -168,6 +168,7 @@ export const user = sqliteTable("user", {
   emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
   image: text("image"),
   role: text("role").notNull().default("user"),
+  approved: integer("approved", { mode: "boolean" }).notNull().default(false), // Requires admin approval
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
@@ -272,4 +273,57 @@ export const spareParts = sqliteTable('spare_parts', {
   supplier: text('supplier'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+});
+
+// POSH (Prevention of Sexual Harassment) Complaints - Female Employees Only
+export const poshComplaints = sqliteTable('posh_complaints', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  complaintNo: text('complaint_no').notNull().unique(),
+  complainantId: text('complainant_id').references(() => user.id),
+  complainantName: text('complainant_name').notNull(),
+  complainantEmail: text('complainant_email').notNull(),
+  respondentName: text('respondent_name').notNull(),
+  incidentDate: text('incident_date').notNull(),
+  incidentLocation: text('incident_location').notNull(),
+  description: text('description').notNull(),
+  witnesses: text('witnesses'), // comma separated
+  evidence: text('evidence'), // file URLs
+  status: text('status').notNull().default("Submitted"), // Submitted, Under Review, Investigation, Resolved, Closed
+  resolution: text('resolution'),
+  confidential: integer('confidential', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+});
+
+// ============================================
+// SYSTEM INTEGRATION TABLES
+// ============================================
+
+// Notifications - In-app notification system
+export const notifications = sqliteTable('notifications', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id').references(() => user.id).notNull(),
+  type: text('type').notNull(), // lead, quotation, booking, delivery, service, hr, posh, system
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  link: text('link'), // URL to navigate when clicked
+  entityType: text('entity_type'), // lead, quotation, booking, job_card, etc.
+  entityId: integer('entity_id'), // ID of related entity
+  read: integer('read', { mode: 'boolean' }).notNull().default(false),
+  emailSent: integer('email_sent', { mode: 'boolean' }).notNull().default(false),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+});
+
+// Activity Log - Audit trail for all actions
+export const activityLog = sqliteTable('activity_log', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id').references(() => user.id),
+  userName: text('user_name'), // Denormalized for easy display
+  action: text('action').notNull(), // created, updated, deleted, completed, sent, etc.
+  entityType: text('entity_type').notNull(), // lead, quotation, booking, job_card, vehicle, etc.
+  entityId: integer('entity_id').notNull(),
+  entityName: text('entity_name'), // Human readable identifier (e.g., "QT-2024-0001")
+  details: text('details'), // JSON string with additional context
+  ipAddress: text('ip_address'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 });

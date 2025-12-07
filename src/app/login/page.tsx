@@ -103,40 +103,46 @@ export default function LoginPage() {
 
                 <form onSubmit={handleLogin} className="space-y-8">
                     <div className="space-y-6">
-                        <div className="group relative">
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                className="w-full bg-transparent border-b border-white/20 py-3 text-white placeholder-transparent focus:outline-none focus:border-white transition-colors peer"
-                                placeholder="Email Address"
-                                id="email"
-                            />
+                        {/* Email Field */}
+                        <div className="relative">
                             <label
                                 htmlFor="email"
-                                className="absolute left-0 top-3 text-gray-500 text-sm transition-all peer-focus:-top-5 peer-focus:text-xs peer-focus:text-white peer-not-placeholder-shown:-top-5 peer-not-placeholder-shown:text-xs peer-not-placeholder-shown:text-white"
+                                className={`absolute left-0 transition-all duration-200 ${email
+                                        ? '-top-5 text-xs text-white'
+                                        : 'top-3 text-sm text-gray-500'
+                                    }`}
                             >
                                 Email Address
                             </label>
+                            <input
+                                type="email"
+                                id="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                className="w-full bg-transparent border-b border-white/20 py-3 text-white focus:outline-none focus:border-white transition-colors"
+                            />
                         </div>
 
-                        <div className="group relative">
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                className="w-full bg-transparent border-b border-white/20 py-3 text-white placeholder-transparent focus:outline-none focus:border-white transition-colors peer"
-                                placeholder="Password"
-                                id="password"
-                            />
+                        {/* Password Field */}
+                        <div className="relative">
                             <label
                                 htmlFor="password"
-                                className="absolute left-0 top-3 text-gray-500 text-sm transition-all peer-focus:-top-5 peer-focus:text-xs peer-focus:text-white peer-not-placeholder-shown:-top-5 peer-not-placeholder-shown:text-xs peer-not-placeholder-shown:text-white"
+                                className={`absolute left-0 transition-all duration-200 ${password
+                                        ? '-top-5 text-xs text-white'
+                                        : 'top-3 text-sm text-gray-500'
+                                    }`}
                             >
                                 Password
                             </label>
+                            <input
+                                type="password"
+                                id="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                className="w-full bg-transparent border-b border-white/20 py-3 text-white focus:outline-none focus:border-white transition-colors"
+                            />
                         </div>
                     </div>
 

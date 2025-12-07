@@ -1,291 +1,538 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { DollarSign, Download, Printer, FileText, Mail } from "lucide-react"
+import { useTheme } from "next-themes"
+import {
+    Plus, Calendar, DollarSign, CheckCircle2, Clock, Send, X,
+    TrendingUp, Users, Wallet, Receipt, Download
+} from "lucide-react"
 import { toast } from "sonner"
-import { Badge } from "@/components/ui/badge"
+import { format } from "date-fns"
 
 interface PayrollRecord {
     id: number
+    employeeId: number
     employeeName: string
+    employeeEmail: string
     month: string
     basicSalary: number
     allowances: number
     deductions: number
     netSalary: number
     status: string
-    paymentDate: string
-    designation?: string // Optional, if we fetch it
-    department?: string // Optional
+    createdAt: number
 }
 
-export default function PayrollPage() {
-    const [payrollData, setPayrollData] = useState<PayrollRecord[]>([])
-    const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7))
-    const [loading, setLoading] = useState(false)
-    const [selectedSlip, setSelectedSlip] = useState<PayrollRecord | null>(null)
+interface Employee {
+    id: number
+    firstName: string
+    lastName: string
+    email: string
+    salary: number
+    department: string
+}
+
+export default function PremiumPayrollPage() {
+    const { resolvedTheme } = useTheme()
+    const isDarkMode = resolvedTheme === "dark"
+
+    const [records, setRecords] = useState<PayrollRecord[]>([])
+    const [employees, setEmployees] = useState<Employee[]>([])
+    const [loading, setLoading] = useState(true)
+    const [showModal, setShowModal] = useState(false)
+    const [showDetailModal, setShowDetailModal] = useState(false)
+    const [selectedRecord, setSelectedRecord] = useState<PayrollRecord | null>(null)
+    const [filterMonth, setFilterMonth] = useState(format(new Date(), "yyyy-MM"))
+    const [sending, setSending] = useState<number | null>(null)
+
+    const [formData, setFormData] = useState({
+        employeeId: "",
+        month: format(new Date(), "yyyy-MM"),
+        basicSalary: "",
+        allowances: "0",
+        deductions: "0"
+    })
 
     useEffect(() => {
-        fetchPayroll()
-    }, [selectedMonth])
+        fetchRecords()
+        fetchEmployees()
+    }, [])
 
-    async function fetchPayroll() {
-        try {
-            const res = await fetch(`/api/hr/payroll?month=${selectedMonth}`)
-            const data = await res.json()
-            if (data.data) setPayrollData(data.data)
-        } catch (error) {
-            console.error("Failed to fetch payroll", error)
-        }
-    }
-
-    async function handleGeneratePayroll() {
+    async function fetchRecords() {
         setLoading(true)
         try {
-            const res = await fetch("/api/hr/payroll", {
-                method: "POST",
-                body: JSON.stringify({ month: selectedMonth })
-            })
-
-            if (res.ok) {
-                toast.success("Payroll generated successfully")
-                fetchPayroll()
-            } else {
-                toast.error("Failed to generate payroll")
-            }
-        } catch (error) {
-            toast.error("Something went wrong")
+            const res = await fetch("/api/hr/payroll")
+            const data = await res.json()
+            if (data.data) setRecords(data.data)
         } finally {
             setLoading(false)
         }
     }
 
-    async function handleEmailSlip(record: PayrollRecord) {
-        toast.promise(
-            fetch(`/api/hr/payroll/${record.id}/send`, { method: "POST", body: JSON.stringify({}) }),
-            {
-                loading: "Sending email...",
-                success: "Payslip sent to employee!",
-                error: "Failed to send email"
-            }
-        )
+    async function fetchEmployees() {
+        const res = await fetch("/api/hr/employees")
+        const data = await res.json()
+        if (data.data) setEmployees(data.data)
     }
 
-    return (
-        <div className="p-8 space-y-8 bg-zinc-50/50 min-h-screen">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Payroll</h1>
-                    <p className="text-zinc-500 mt-1">Manage salaries and generate payslips.</p>
-                </div>
-                <div className="flex items-center gap-4">
-                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Select Month" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="2023-10">October 2023</SelectItem>
-                            <SelectItem value="2023-11">November 2023</SelectItem>
-                            <SelectItem value="2023-12">December 2023</SelectItem>
-                            <SelectItem value="2024-01">January 2024</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button onClick={handleGeneratePayroll} disabled={loading} className="bg-zinc-900 text-white hover:bg-zinc-800">
-                        <DollarSign className="mr-2 h-4 w-4" />
-                        {loading ? "Generating..." : "Generate Payroll"}
-                    </Button>
-                </div>
-            </div>
+    function handleEmployeeSelect(id: string) {
+        const emp = employees.find(e => e.id === parseInt(id))
+        setFormData({
+            ...formData,
+            employeeId: id,
+            basicSalary: emp ? Math.round(emp.salary / 12).toString() : ""
+        })
+    }
 
-            <div className="grid gap-6 md:grid-cols-3">
-                <Card className="border-zinc-200 shadow-sm">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-zinc-500">Total Payout</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-zinc-900">
-                            ₹{payrollData.reduce((acc, curr) => acc + curr.netSalary, 0).toLocaleString()}
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-zinc-200 shadow-sm">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-zinc-500">Pending Payments</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-zinc-900">
-                            {payrollData.filter(p => p.status === "Pending").length}
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-zinc-200 shadow-sm">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-zinc-500">Processed</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-zinc-900">
-                            {payrollData.filter(p => p.status === "Paid").length}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+    async function generatePayroll(e: React.FormEvent) {
+        e.preventDefault()
+        const res = await fetch("/api/hr/payroll", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                employeeId: parseInt(formData.employeeId),
+                month: formData.month,
+                basicSalary: parseInt(formData.basicSalary) || 0,
+                allowances: parseInt(formData.allowances) || 0,
+                deductions: parseInt(formData.deductions) || 0
+            })
+        })
 
-            <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #payslip, #payslip * {
-            visibility: visible;
-          }
-          #payslip {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          /* Hide print button and other actions inside the slip */
-          #payslip button {
-            display: none !important;
-          }
+        if (res.ok) {
+            toast.success("Payroll generated!")
+            setShowModal(false)
+            fetchRecords()
+            setFormData({ employeeId: "", month: format(new Date(), "yyyy-MM"), basicSalary: "", allowances: "0", deductions: "0" })
+        } else {
+            const data = await res.json()
+            toast.error(data.error || "Failed to generate")
         }
-      `}</style>
-            <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="bg-zinc-50/50">
-                            <TableHead>Employee</TableHead>
-                            <TableHead>Basic Salary</TableHead>
-                            <TableHead>Allowances</TableHead>
-                            <TableHead>Deductions</TableHead>
-                            <TableHead>Net Salary</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {payrollData.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={7} className="text-center py-8 text-zinc-500">
-                                    No payroll records found for this month.
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            payrollData.map((record) => (
-                                <TableRow key={record.id}>
-                                    <TableCell className="font-medium">{record.employeeName}</TableCell>
-                                    <TableCell>₹{record.basicSalary.toLocaleString()}</TableCell>
-                                    <TableCell className="text-emerald-600">+₹{record.allowances.toLocaleString()}</TableCell>
-                                    <TableCell className="text-rose-600">-₹{record.deductions.toLocaleString()}</TableCell>
-                                    <TableCell className="font-bold">₹{record.netSalary.toLocaleString()}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="outline" className={
-                                            record.status === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"
-                                        }>
-                                            {record.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Dialog>
-                                            <DialogTrigger asChild>
-                                                <Button variant="ghost" size="sm" onClick={() => setSelectedSlip(record)}>
-                                                    <FileText className="mr-2 h-4 w-4" /> View Slip
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="max-w-3xl">
-                                                <DialogHeader>
-                                                    <DialogTitle>Payslip - {selectedSlip?.month}</DialogTitle>
-                                                </DialogHeader>
-                                                {selectedSlip && (
-                                                    <div className="p-6 border rounded-lg space-y-6" id="payslip">
-                                                        <div className="flex justify-between items-start border-b pb-6">
-                                                            <div>
-                                                                <h2 className="text-2xl font-bold text-zinc-900">Acme Corp</h2>
-                                                                <p className="text-zinc-500">123 Business Park, Tech City</p>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <h3 className="text-lg font-semibold">Payslip</h3>
-                                                                <p className="text-zinc-500">{selectedSlip.month}</p>
-                                                            </div>
-                                                        </div>
+    }
 
-                                                        <div className="grid grid-cols-2 gap-8">
-                                                            <div>
-                                                                <p className="text-sm text-zinc-500">Employee Name</p>
-                                                                <p className="font-medium">{selectedSlip.employeeName}</p>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm text-zinc-500">Payment Date</p>
-                                                                <p className="font-medium">{selectedSlip.paymentDate || "Pending"}</p>
-                                                            </div>
-                                                        </div>
+    async function sendPayslip(record: PayrollRecord) {
+        setSending(record.id)
+        try {
+            const res = await fetch(`/api/hr/payroll/${record.id}/send`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: record.employeeEmail })
+            })
 
-                                                        <div className="grid grid-cols-2 gap-8 border-t pt-6">
-                                                            <div>
-                                                                <h4 className="font-semibold mb-4 text-emerald-700">Earnings</h4>
-                                                                <div className="space-y-2">
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-zinc-600">Basic Salary</span>
-                                                                        <span>₹{selectedSlip.basicSalary.toLocaleString()}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-zinc-600">House Rent Allowance</span>
-                                                                        <span>₹{(selectedSlip.allowances * 0.4).toLocaleString()}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-zinc-600">Special Allowance</span>
-                                                                        <span>₹{(selectedSlip.allowances * 0.6).toLocaleString()}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div>
-                                                                <h4 className="font-semibold mb-4 text-rose-700">Deductions</h4>
-                                                                <div className="space-y-2">
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-zinc-600">Provident Fund</span>
-                                                                        <span>₹{(selectedSlip.deductions * 0.5).toLocaleString()}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between">
-                                                                        <span className="text-zinc-600">Professional Tax</span>
-                                                                        <span>₹{(selectedSlip.deductions * 0.5).toLocaleString()}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+            if (res.ok) {
+                toast.success("Payslip sent to employee!")
+            } else {
+                toast.error("Failed to send")
+            }
+        } finally {
+            setSending(null)
+        }
+    }
 
-                                                        <div className="border-t pt-6 flex justify-between items-center">
-                                                            <div className="text-sm text-zinc-500">
-                                                                *This is a computer generated slip.
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <p className="text-sm text-zinc-500">Net Payable</p>
-                                                                <p className="text-2xl font-bold text-zinc-900">₹{selectedSlip.netSalary.toLocaleString()}</p>
-                                                            </div>
-                                                        </div>
+    async function markPaid(id: number) {
+        const res = await fetch(`/api/hr/payroll/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "Paid" })
+        })
 
-                                                        <div className="flex justify-end gap-2 pt-4 print:hidden">
-                                                            <Button variant="outline" onClick={() => handleEmailSlip(selectedSlip)}>
-                                                                <Mail className="mr-2 h-4 w-4" /> Email
-                                                            </Button>
-                                                            <Button variant="outline" onClick={() => window.print()}>
-                                                                <Printer className="mr-2 h-4 w-4" /> Print
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </DialogContent>
-                                        </Dialog>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+        if (res.ok) {
+            toast.success("Marked as paid")
+            fetchRecords()
+        }
+    }
+
+    // Filter by month
+    const filteredRecords = records.filter(r =>
+        r.month === filterMonth
+    ).sort((a, b) => b.createdAt - a.createdAt)
+
+    // Stats
+    const monthRecords = filteredRecords
+    const stats = {
+        total: monthRecords.length,
+        pending: monthRecords.filter(r => r.status === "Pending").length,
+        paid: monthRecords.filter(r => r.status === "Paid").length,
+        totalPayout: monthRecords.reduce((acc, r) => acc + r.netSalary, 0)
+    }
+
+    const netSalary = (parseInt(formData.basicSalary) || 0) +
+        (parseInt(formData.allowances) || 0) -
+        (parseInt(formData.deductions) || 0)
+
+    return (
+        <div className={`min-h-screen ${isDarkMode ? 'bg-[#0a0a0a]' : 'bg-gray-50'}`}>
+            <div className="p-6">
+                {/* Header */}
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+                    <div>
+                        <span className={`text-[10px] font-mono uppercase tracking-[0.15em] ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+                            HR
+                        </span>
+                        <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            Payroll
+                        </h1>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl
+              ${isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-200'}`}>
+                            <Calendar className={`h-4 w-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                            <input
+                                type="month"
+                                value={filterMonth}
+                                onChange={(e) => setFilterMonth(e.target.value)}
+                                className={`bg-transparent outline-none text-sm
+                  ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+                            />
+                        </div>
+
+                        <button
+                            onClick={() => setShowModal(true)}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+                ${isDarkMode
+                                    ? 'bg-[#D4AF37] text-black hover:bg-[#E5C158]'
+                                    : 'bg-[#003366] text-white hover:bg-[#004488]'}`}
+                        >
+                            <Plus className="h-4 w-4" />
+                            Generate Payroll
+                        </button>
+                    </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                    {[
+                        { label: "Total Records", value: stats.total, icon: Users },
+                        { label: "Pending", value: stats.pending, icon: Clock, color: "text-amber-500" },
+                        { label: "Paid", value: stats.paid, icon: CheckCircle2, color: "text-emerald-500" },
+                        { label: "Total Payout", value: `₹${(stats.totalPayout / 100000).toFixed(1)}L`, icon: Wallet, color: isDarkMode ? "text-[#D4AF37]" : "text-[#003366]" },
+                    ].map((stat, i) => (
+                        <div key={i} className={`p-4 rounded-xl border transition-all hover:scale-[1.02]
+              ${isDarkMode ? 'bg-white/[0.02] border-white/10' : 'bg-white border-gray-200'}`}>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className={`text-[10px] uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    {stat.label}
+                                </span>
+                                <stat.icon className={`h-4 w-4 ${stat.color || (isDarkMode ? 'text-gray-500' : 'text-gray-400')}`} />
+                            </div>
+                            <p className={`text-2xl font-bold ${stat.color || (isDarkMode ? 'text-white' : 'text-gray-900')}`}>
+                                {stat.value}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Records Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {loading ? (
+                        [1, 2, 3, 4, 5, 6].map(i => (
+                            <div key={i} className={`h-48 rounded-xl animate-pulse ${isDarkMode ? 'bg-white/5' : 'bg-gray-200'}`} />
+                        ))
+                    ) : filteredRecords.length === 0 ? (
+                        <div className={`col-span-full text-center py-16 rounded-xl border-2 border-dashed
+              ${isDarkMode ? 'border-white/10 text-gray-500' : 'border-gray-200 text-gray-400'}`}>
+                            <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p className="text-lg font-medium">No payroll records</p>
+                            <p className="text-sm mt-1">Generate payroll for this month</p>
+                        </div>
+                    ) : (
+                        filteredRecords.map((record) => (
+                            <PayrollCard
+                                key={record.id}
+                                record={record}
+                                isDarkMode={isDarkMode}
+                                onViewDetail={() => { setSelectedRecord(record); setShowDetailModal(true) }}
+                                onMarkPaid={() => markPaid(record.id)}
+                                onSendSlip={() => sendPayslip(record)}
+                                sending={sending === record.id}
+                            />
+                        ))
+                    )}
+                </div>
+            </div>
+
+            {/* Generate Modal */}
+            {showModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className={`w-full max-w-md rounded-2xl ${isDarkMode ? 'bg-[#111]' : 'bg-white'} p-6`}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                Generate Payroll
+                            </h2>
+                            <button onClick={() => setShowModal(false)} className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}>
+                                <X className={`h-5 w-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={generatePayroll} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2">
+                                    <label className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        Employee *
+                                    </label>
+                                    <select
+                                        required
+                                        value={formData.employeeId}
+                                        onChange={(e) => handleEmployeeSelect(e.target.value)}
+                                        className={`w-full px-4 py-2.5 rounded-xl text-sm ${isDarkMode
+                                            ? 'bg-white/5 border border-white/10 text-white'
+                                            : 'bg-gray-50 border border-gray-200 text-gray-900'
+                                            } focus:outline-none`}
+                                    >
+                                        <option value="">Select employee...</option>
+                                        {employees.map(e => (
+                                            <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.department})</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        Month *
+                                    </label>
+                                    <input
+                                        type="month"
+                                        required
+                                        value={formData.month}
+                                        onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+                                        className={`w-full px-4 py-2.5 rounded-xl text-sm ${isDarkMode
+                                            ? 'bg-white/5 border border-white/10 text-white'
+                                            : 'bg-gray-50 border border-gray-200 text-gray-900'
+                                            } focus:outline-none`}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        Basic Salary
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.basicSalary}
+                                        onChange={(e) => setFormData({ ...formData, basicSalary: e.target.value })}
+                                        className={`w-full px-4 py-2.5 rounded-xl text-sm ${isDarkMode
+                                            ? 'bg-white/5 border border-white/10 text-white'
+                                            : 'bg-gray-50 border border-gray-200 text-gray-900'
+                                            } focus:outline-none`}
+                                        placeholder="Auto from CTC"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        Allowances
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.allowances}
+                                        onChange={(e) => setFormData({ ...formData, allowances: e.target.value })}
+                                        className={`w-full px-4 py-2.5 rounded-xl text-sm ${isDarkMode
+                                            ? 'bg-white/5 border border-white/10 text-white'
+                                            : 'bg-gray-50 border border-gray-200 text-gray-900'
+                                            } focus:outline-none`}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                        Deductions
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.deductions}
+                                        onChange={(e) => setFormData({ ...formData, deductions: e.target.value })}
+                                        className={`w-full px-4 py-2.5 rounded-xl text-sm ${isDarkMode
+                                            ? 'bg-white/5 border border-white/10 text-white'
+                                            : 'bg-gray-50 border border-gray-200 text-gray-900'
+                                            } focus:outline-none`}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Net Preview */}
+                            <div className={`p-4 rounded-xl ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                                <div className="flex justify-between items-center">
+                                    <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Net Salary</span>
+                                    <span className={`text-xl font-bold ${isDarkMode ? 'text-[#D4AF37]' : 'text-[#003366]'}`}>
+                                        ₹{netSalary.toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className={`w-full py-3 rounded-xl font-medium transition-colors
+                  ${isDarkMode
+                                        ? 'bg-[#D4AF37] text-black hover:bg-[#E5C158]'
+                                        : 'bg-[#003366] text-white hover:bg-[#004488]'}`}
+                            >
+                                Generate Payroll
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Detail Modal */}
+            {showDetailModal && selectedRecord && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className={`w-full max-w-sm rounded-2xl ${isDarkMode ? 'bg-[#111]' : 'bg-white'} p-6`}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                Payslip Details
+                            </h2>
+                            <button onClick={() => setShowDetailModal(false)} className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}>
+                                <X className={`h-5 w-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
+                            </button>
+                        </div>
+
+                        <div className={`text-center pb-4 mb-4 border-b ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
+                            <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{selectedRecord.employeeName}</p>
+                            <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>{selectedRecord.month}</p>
+                        </div>
+
+                        <div className="space-y-3">
+                            {[
+                                { label: "Basic Salary", value: selectedRecord.basicSalary, positive: true },
+                                { label: "Allowances", value: selectedRecord.allowances, positive: true },
+                                { label: "Deductions", value: selectedRecord.deductions, positive: false },
+                            ].map((item, i) => (
+                                <div key={i} className="flex justify-between text-sm">
+                                    <span className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>{item.label}</span>
+                                    <span className={`font-medium ${item.positive ? (isDarkMode ? 'text-emerald-400' : 'text-emerald-600') : 'text-red-500'}`}>
+                                        {item.positive ? '+' : '-'}₹{item.value.toLocaleString()}
+                                    </span>
+                                </div>
+                            ))}
+                            <div className={`pt-3 border-t flex justify-between ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
+                                <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Net Salary</span>
+                                <span className={`text-lg font-bold ${isDarkMode ? 'text-[#D4AF37]' : 'text-[#003366]'}`}>
+                                    ₹{selectedRecord.netSalary.toLocaleString()}
+                                </span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setShowDetailModal(false)}
+                            className={`w-full mt-6 py-2.5 rounded-xl font-medium ${isDarkMode
+                                ? 'bg-white/5 text-gray-300 hover:bg-white/10'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
+// Payroll Card Component
+function PayrollCard({
+    record,
+    isDarkMode,
+    onViewDetail,
+    onMarkPaid,
+    onSendSlip,
+    sending
+}: {
+    record: PayrollRecord
+    isDarkMode: boolean
+    onViewDetail: () => void
+    onMarkPaid: () => void
+    onSendSlip: () => void
+    sending: boolean
+}) {
+    return (
+        <div className={`group relative rounded-xl p-4 transition-all hover:scale-[1.01]
+      ${isDarkMode
+                ? 'bg-white/[0.03] border border-white/10 hover:border-white/20'
+                : 'bg-white border border-gray-200 hover:shadow-lg'}`}
+        >
+            {/* Header */}
+            <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold
+            ${isDarkMode ? 'bg-[#D4AF37]/20 text-[#D4AF37]' : 'bg-[#003366]/10 text-[#003366]'}`}>
+                        {record.employeeName.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <div>
+                        <p className={`font-medium text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {record.employeeName}
+                        </p>
+                        <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                            {record.month}
+                        </p>
+                    </div>
+                </div>
+
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium
+          ${record.status === "Paid"
+                        ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                        : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                    }`}>
+                    {record.status}
+                </span>
+            </div>
+
+            {/* Salary Breakdown */}
+            <div className={`p-3 rounded-lg mb-3 ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                <div className="flex justify-between mb-2">
+                    <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Net Salary</span>
+                    <span className={`font-bold ${isDarkMode ? 'text-[#D4AF37]' : 'text-[#003366]'}`}>
+                        ₹{record.netSalary.toLocaleString()}
+                    </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-[10px]">
+                    <div>
+                        <p className={isDarkMode ? 'text-gray-600' : 'text-gray-400'}>Basic</p>
+                        <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>₹{(record.basicSalary / 1000).toFixed(0)}K</p>
+                    </div>
+                    <div>
+                        <p className={isDarkMode ? 'text-gray-600' : 'text-gray-400'}>Allowances</p>
+                        <p className="text-emerald-500">+₹{(record.allowances / 1000).toFixed(0)}K</p>
+                    </div>
+                    <div>
+                        <p className={isDarkMode ? 'text-gray-600' : 'text-gray-400'}>Deductions</p>
+                        <p className="text-red-500">-₹{(record.deductions / 1000).toFixed(0)}K</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+                <button
+                    onClick={onViewDetail}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium
+            ${isDarkMode
+                            ? 'bg-white/5 text-gray-300 hover:bg-white/10'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                    <Receipt className="h-3.5 w-3.5" />
+                    Details
+                </button>
+                {record.status === "Pending" && (
+                    <button
+                        onClick={onMarkPaid}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium
+              ${isDarkMode
+                                ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                                : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                    >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Mark Paid
+                    </button>
+                )}
+                <button
+                    onClick={onSendSlip}
+                    disabled={sending}
+                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium
+            ${isDarkMode
+                            ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 disabled:opacity-50'
+                            : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'}`}
+                >
+                    <Send className="h-3.5 w-3.5" />
+                </button>
             </div>
         </div>
     )

@@ -6,13 +6,16 @@ export const runtime = "nodejs"
 
 // Map report resource -> existing API route
 const RESOURCE_MAP: Record<string, string> = {
-  leads: "/api/leads",
+  leads: "/api/sales/leads",
   vehicles: "/api/vehicles",
-  appointments: "/api/appointments",
-  "job-cards": "/api/job-cards",
-  quotations: "/api/quotations",
-  bookings: "/api/bookings",
+  appointments: "/api/service/appointments",
+  "job-cards": "/api/service/job-cards",
+  quotations: "/api/sales/quotations",
+  bookings: "/api/sales/bookings",
   "service-history": "/api/service-history",
+  "spare-parts": "/api/inventory/spare-parts",
+  employees: "/api/hr/employees",
+  "test-drives": "/api/sales/test-drives",
 }
 
 async function fetchData(baseUrl: string, resource: string, bearer?: string) {

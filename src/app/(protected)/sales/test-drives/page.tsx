@@ -1,30 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useTheme } from "next-themes"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Plus, Calendar, Clock, Car, User, CheckCircle2, AlertCircle, Star, MessageSquare } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+  Plus, Calendar, Clock, Car, User, CheckCircle2, X, Star,
+  ChevronRight, Play, AlertCircle, MapPin
+} from "lucide-react"
 import { toast } from "sonner"
-import { Textarea } from "@/components/ui/textarea"
-import { format, isToday, isFuture, isPast, parseISO } from "date-fns"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { format, isToday, isFuture, isPast, parseISO, addDays } from "date-fns"
 
 interface TestDrive {
   id: number
@@ -49,16 +32,31 @@ interface Lead {
   vehicleInterest: any
 }
 
-export default function TestDrivesPage() {
+const VEHICLES = [
+  "Hyundai Creta SX(O)",
+  "Kia Seltos GTX+",
+  "Mahindra XUV700 AX7",
+  "Tata Harrier Fearless",
+  "Volkswagen Virtus GT"
+]
+
+export default function PremiumTestDrivesPage() {
+  const { resolvedTheme } = useTheme()
+  const isDarkMode = resolvedTheme === "dark"
+
   const [drives, setDrives] = useState<TestDrive[]>([])
   const [leads, setLeads] = useState<Lead[]>([])
-  const [dialogOpen, setDialogOpen] = useState(false)
-
-  // Feedback State
-  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [selectedDrive, setSelectedDrive] = useState<TestDrive | null>(null)
   const [feedback, setFeedback] = useState("")
   const [rating, setRating] = useState(5)
+
+  // Form state
+  const [formData, setFormData] = useState({
+    leadId: "", customerName: "", vehicle: "", date: "", time: "", notes: ""
+  })
 
   useEffect(() => {
     fetchDrives()
@@ -66,9 +64,14 @@ export default function TestDrivesPage() {
   }, [])
 
   async function fetchDrives() {
-    const res = await fetch("/api/sales/test-drives")
-    const data = await res.json()
-    if (data.data) setDrives(data.data)
+    setLoading(true)
+    try {
+      const res = await fetch("/api/sales/test-drives")
+      const data = await res.json()
+      if (data.data) setDrives(data.data)
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function fetchLeads() {
@@ -77,25 +80,22 @@ export default function TestDrivesPage() {
     if (data.data) setLeads(data.data)
   }
 
-  async function scheduleDrive(formData: FormData) {
+  async function scheduleDrive(e: React.FormEvent) {
+    e.preventDefault()
     const res = await fetch("/api/sales/test-drives", {
       method: "POST",
-      body: JSON.stringify(Object.fromEntries(formData)),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
     })
 
     if (res.ok) {
-      setDialogOpen(false)
+      setShowAddModal(false)
+      setFormData({ leadId: "", customerName: "", vehicle: "", date: "", time: "", notes: "" })
       fetchDrives()
-      toast.success("Test Drive scheduled successfully")
+      toast.success("Test Drive scheduled!")
     } else {
       const error = await res.json()
-      if (res.status === 409) {
-        toast.error("Vehicle Conflict", {
-          description: error.message
-        })
-      } else {
-        toast.error("Failed to schedule drive")
-      }
+      toast.error(error.message || "Failed to schedule")
     }
   }
 
@@ -104,13 +104,14 @@ export default function TestDrivesPage() {
       const drive = drives.find(d => d.id === id)
       if (drive) {
         setSelectedDrive(drive)
-        setFeedbackOpen(true)
+        setShowFeedbackModal(true)
       }
       return
     }
 
     const res = await fetch(`/api/sales/test-drives/${id}`, {
       method: "PUT",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status })
     })
 
@@ -125,20 +126,17 @@ export default function TestDrivesPage() {
 
     const res = await fetch(`/api/sales/test-drives/${selectedDrive.id}`, {
       method: "PUT",
-      body: JSON.stringify({
-        status: "Completed",
-        feedback,
-        rating
-      })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "Completed", feedback, rating })
     })
 
     if (res.ok) {
-      setFeedbackOpen(false)
+      setShowFeedbackModal(false)
       setSelectedDrive(null)
       setFeedback("")
       setRating(5)
       fetchDrives()
-      toast.success("Drive completed & feedback saved")
+      toast.success("Drive completed!")
     }
   }
 
@@ -148,228 +146,460 @@ export default function TestDrivesPage() {
     past: drives.filter(d => isPast(parseISO(d.date)) && !isToday(parseISO(d.date)))
   }
 
+  const stats = {
+    total: drives.length,
+    scheduled: drives.filter(d => d.status === "Scheduled").length,
+    inProgress: drives.filter(d => d.status === "In Progress").length,
+    completed: drives.filter(d => d.status === "Completed").length,
+  }
+
   return (
-    <div className="flex flex-col h-[calc(100vh-1rem)] p-2 space-y-4 overflow-hidden">
-      <div className="flex items-center justify-between shrink-0 px-2">
-        <div>
-          <h1 className="text-lg font-bold tracking-tight">Test Drives</h1>
-          <p className="text-[10px] text-muted-foreground">Schedule and manage vehicle test drives.</p>
+    <div className={`min-h-screen ${isDarkMode ? 'bg-[#0a0a0a]' : 'bg-gray-50'}`}>
+      <div className="p-6">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`text-[10px] font-mono uppercase tracking-[0.15em] ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+                SALES
+              </span>
+            </div>
+            <h1 className={`text-2xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              Test Drives
+            </h1>
+          </div>
+
+          <button
+            onClick={() => setShowAddModal(true)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+              ${isDarkMode
+                ? 'bg-[#D4AF37] text-black hover:bg-[#E5C158]'
+                : 'bg-[#003366] text-white hover:bg-[#004488]'}`}
+          >
+            <Plus className="h-4 w-4" />
+            Schedule Drive
+          </button>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="h-7 text-xs">
-              <Plus className="mr-1.5 h-3 w-3" /> Schedule Drive
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Schedule Test Drive</DialogTitle>
-            </DialogHeader>
-            <form action={scheduleDrive} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="leadId">Select Lead (Optional)</Label>
-                <Select name="leadId">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a lead..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {leads.map(lead => (
-                      <SelectItem key={lead.id} value={String(lead.id)}>
-                        {lead.name} - {lead.vehicleInterest}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="customerName">Customer Name (If not a lead)</Label>
-                <Input name="customerName" placeholder="Walk-in Customer Name" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="vehicle">Vehicle</Label>
-                <Select name="vehicle" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select vehicle..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Hyundai Creta SX(O)">Hyundai Creta SX(O)</SelectItem>
-                    <SelectItem value="Kia Seltos GTX+">Kia Seltos GTX+</SelectItem>
-                    <SelectItem value="Mahindra XUV700 AX7">Mahindra XUV700 AX7</SelectItem>
-                    <SelectItem value="Tata Harrier Fearless">Tata Harrier Fearless</SelectItem>
-                    <SelectItem value="Volkswagen Virtus GT">Volkswagen Virtus GT</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
-                  <Input id="date" name="date" type="date" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="time">Time</Label>
-                  <Input id="time" name="time" type="time" required />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea name="notes" placeholder="Special requests, license check..." />
-              </div>
-              <Button type="submit" className="w-full">Schedule Drive</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
 
-      <div className="flex-1 overflow-y-auto space-y-6 px-2 pb-4">
-        {/* Today's Drives */}
-        <section>
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <Calendar className="h-3 w-3" /> Today
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {groupedDrives.today.length === 0 && <p className="text-xs text-zinc-400 italic col-span-full">No drives scheduled for today.</p>}
-            {groupedDrives.today.map(drive => (
-              <DriveCard key={drive.id} drive={drive} onUpdateStatus={updateStatus} />
-            ))}
-          </div>
-        </section>
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-3 mb-6">
+          {[
+            { label: "Total", value: stats.total, icon: Car },
+            { label: "Scheduled", value: stats.scheduled, color: "text-blue-500", icon: Calendar },
+            { label: "In Progress", value: stats.inProgress, color: "text-amber-500", icon: Play },
+            { label: "Completed", value: stats.completed, color: "text-emerald-500", icon: CheckCircle2 },
+          ].map((stat, i) => (
+            <div key={i} className={`p-4 rounded-xl border transition-all hover:scale-[1.02]
+              ${isDarkMode ? 'bg-white/[0.02] border-white/10' : 'bg-white border-gray-200'}`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-[10px] uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {stat.label}
+                </span>
+                <stat.icon className={`h-4 w-4 ${stat.color || (isDarkMode ? 'text-gray-500' : 'text-gray-400')}`} />
+              </div>
+              <p className={`text-2xl font-bold ${stat.color || (isDarkMode ? 'text-white' : 'text-gray-900')}`}>
+                {stat.value}
+              </p>
+            </div>
+          ))}
+        </div>
 
-        {/* Upcoming Drives */}
-        <section>
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <Clock className="h-3 w-3" /> Upcoming
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {groupedDrives.upcoming.length === 0 && <p className="text-xs text-zinc-400 italic col-span-full">No upcoming drives.</p>}
-            {groupedDrives.upcoming.map(drive => (
-              <DriveCard key={drive.id} drive={drive} onUpdateStatus={updateStatus} />
-            ))}
-          </div>
-        </section>
+        {/* Timeline Sections */}
+        <div className="space-y-8">
+          {/* Today */}
+          <section>
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`w-3 h-3 rounded-full ${isDarkMode ? 'bg-emerald-500' : 'bg-emerald-500'} animate-pulse`} />
+              <h2 className={`text-sm font-semibold uppercase tracking-wider ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                Today
+              </h2>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-100 text-emerald-600'}`}>
+                {groupedDrives.today.length}
+              </span>
+            </div>
 
-        {/* Past Drives */}
-        <section>
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <CheckCircle2 className="h-3 w-3" /> Past & Completed
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {groupedDrives.past.map(drive => (
-              <DriveCard key={drive.id} drive={drive} onUpdateStatus={updateStatus} />
-            ))}
-          </div>
-        </section>
-      </div>
-
-      {/* Feedback Dialog */}
-      <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Complete Test Drive</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Customer Rating</Label>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setRating(star)}
-                    className={`p-1 hover:scale-110 transition-transform ${rating >= star ? "text-yellow-400" : "text-zinc-200"}`}
-                  >
-                    <Star className="h-6 w-6 fill-current" />
-                  </button>
+            {groupedDrives.today.length === 0 ? (
+              <div className={`text-center py-8 rounded-xl border-2 border-dashed
+                ${isDarkMode ? 'border-white/10 text-gray-500' : 'border-gray-200 text-gray-400'}`}>
+                <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No drives scheduled for today</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {groupedDrives.today.map(drive => (
+                  <DriveCard key={drive.id} drive={drive} isDarkMode={isDarkMode} onUpdateStatus={updateStatus} />
                 ))}
               </div>
+            )}
+          </section>
+
+          {/* Upcoming */}
+          <section>
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`w-3 h-3 rounded-full ${isDarkMode ? 'bg-blue-500' : 'bg-blue-500'}`} />
+              <h2 className={`text-sm font-semibold uppercase tracking-wider ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                Upcoming
+              </h2>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${isDarkMode ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-100 text-blue-600'}`}>
+                {groupedDrives.upcoming.length}
+              </span>
             </div>
-            <div className="space-y-2">
-              <Label>Feedback & Notes</Label>
-              <Textarea
-                placeholder="Customer feedback, vehicle condition..."
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-              />
+
+            {groupedDrives.upcoming.length === 0 ? (
+              <div className={`text-center py-8 rounded-xl border-2 border-dashed
+                ${isDarkMode ? 'border-white/10 text-gray-500' : 'border-gray-200 text-gray-400'}`}>
+                <p className="text-sm">No upcoming drives</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {groupedDrives.upcoming.map(drive => (
+                  <DriveCard key={drive.id} drive={drive} isDarkMode={isDarkMode} onUpdateStatus={updateStatus} />
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Past */}
+          {groupedDrives.past.length > 0 && (
+            <section>
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-3 h-3 rounded-full ${isDarkMode ? 'bg-gray-500' : 'bg-gray-400'}`} />
+                <h2 className={`text-sm font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                  Past
+                </h2>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${isDarkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
+                  {groupedDrives.past.length}
+                </span>
+              </div>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-75">
+                {groupedDrives.past.slice(0, 6).map(drive => (
+                  <DriveCard key={drive.id} drive={drive} isDarkMode={isDarkMode} onUpdateStatus={updateStatus} />
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+      </div>
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className={`w-full max-w-md rounded-2xl ${isDarkMode ? 'bg-[#111]' : 'bg-white'} p-6`}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                Schedule Test Drive
+              </h2>
+              <button onClick={() => setShowAddModal(false)} className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}>
+                <X className={`h-5 w-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
+              </button>
+            </div>
+
+            <form onSubmit={scheduleDrive} className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Select Lead (Optional)
+                </label>
+                <select
+                  value={formData.leadId}
+                  onChange={(e) => setFormData({ ...formData, leadId: e.target.value })}
+                  className={`w-full px-4 py-2.5 rounded-xl text-sm ${isDarkMode
+                    ? 'bg-white/5 border border-white/10 text-white'
+                    : 'bg-gray-50 border border-gray-200 text-gray-900'
+                    } focus:outline-none`}
+                >
+                  <option value="">Walk-in Customer</option>
+                  {leads.map(lead => (
+                    <option key={lead.id} value={lead.id}>{lead.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {!formData.leadId && (
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Customer Name
+                  </label>
+                  <input
+                    type="text"
+                    required={!formData.leadId}
+                    value={formData.customerName}
+                    onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                    className={`w-full px-4 py-2.5 rounded-xl text-sm ${isDarkMode
+                      ? 'bg-white/5 border border-white/10 text-white'
+                      : 'bg-gray-50 border border-gray-200 text-gray-900'
+                      } focus:outline-none`}
+                    placeholder="John Doe"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Vehicle *
+                </label>
+                <select
+                  required
+                  value={formData.vehicle}
+                  onChange={(e) => setFormData({ ...formData, vehicle: e.target.value })}
+                  className={`w-full px-4 py-2.5 rounded-xl text-sm ${isDarkMode
+                    ? 'bg-white/5 border border-white/10 text-white'
+                    : 'bg-gray-50 border border-gray-200 text-gray-900'
+                    } focus:outline-none`}
+                >
+                  <option value="">Select vehicle...</option>
+                  {VEHICLES.map(v => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    className={`w-full px-4 py-2.5 rounded-xl text-sm ${isDarkMode
+                      ? 'bg-white/5 border border-white/10 text-white'
+                      : 'bg-gray-50 border border-gray-200 text-gray-900'
+                      } focus:outline-none`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Time *
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={formData.time}
+                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                    className={`w-full px-4 py-2.5 rounded-xl text-sm ${isDarkMode
+                      ? 'bg-white/5 border border-white/10 text-white'
+                      : 'bg-gray-50 border border-gray-200 text-gray-900'
+                      } focus:outline-none`}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Notes
+                </label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  rows={2}
+                  className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${isDarkMode
+                    ? 'bg-white/5 border border-white/10 text-white'
+                    : 'bg-gray-50 border border-gray-200 text-gray-900'
+                    } focus:outline-none`}
+                  placeholder="Special requests..."
+                />
+              </div>
+
+              <button
+                type="submit"
+                className={`w-full py-3 rounded-xl font-medium transition-colors ${isDarkMode
+                  ? 'bg-[#D4AF37] text-black hover:bg-[#E5C158]'
+                  : 'bg-[#003366] text-white hover:bg-[#004488]'}`}
+              >
+                Schedule Drive
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && selectedDrive && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className={`w-full max-w-md rounded-2xl ${isDarkMode ? 'bg-[#111]' : 'bg-white'} p-6`}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                Complete Test Drive
+              </h2>
+              <button onClick={() => setShowFeedbackModal(false)} className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}>
+                <X className={`h-5 w-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Customer Rating
+                </label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRating(star)}
+                      className="transition-transform hover:scale-110"
+                    >
+                      <Star className={`h-8 w-8 ${rating >= star ? "text-amber-400 fill-amber-400" : isDarkMode ? "text-gray-600" : "text-gray-300"}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Feedback
+                </label>
+                <textarea
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  rows={3}
+                  className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${isDarkMode
+                    ? 'bg-white/5 border border-white/10 text-white'
+                    : 'bg-gray-50 border border-gray-200 text-gray-900'
+                    } focus:outline-none`}
+                  placeholder="Customer feedback..."
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowFeedbackModal(false)}
+                  className={`flex-1 py-2.5 rounded-xl font-medium ${isDarkMode
+                    ? 'bg-white/5 text-gray-300 hover:bg-white/10'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitFeedback}
+                  className={`flex-1 py-2.5 rounded-xl font-medium ${isDarkMode
+                    ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                >
+                  Complete
+                </button>
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button onClick={submitFeedback}>Save & Complete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   )
 }
 
-function DriveCard({ drive, onUpdateStatus }: { drive: TestDrive, onUpdateStatus: (id: number, status: string) => void }) {
-  const statusColors: any = {
-    "Scheduled": "bg-blue-50 text-blue-700 border-blue-200",
-    "In Progress": "bg-amber-50 text-amber-700 border-amber-200",
-    "Completed": "bg-emerald-50 text-emerald-700 border-emerald-200",
-    "Cancelled": "bg-red-50 text-red-700 border-red-200"
+// Premium Drive Card
+function DriveCard({
+  drive,
+  isDarkMode,
+  onUpdateStatus
+}: {
+  drive: TestDrive
+  isDarkMode: boolean
+  onUpdateStatus: (id: number, status: string) => void
+}) {
+  const statusConfig: Record<string, { bg: string, text: string, border: string }> = {
+    "Scheduled": { bg: isDarkMode ? "bg-blue-500/10" : "bg-blue-50", text: "text-blue-500", border: "border-blue-500/20" },
+    "In Progress": { bg: isDarkMode ? "bg-amber-500/10" : "bg-amber-50", text: "text-amber-500", border: "border-amber-500/20" },
+    "Completed": { bg: isDarkMode ? "bg-emerald-500/10" : "bg-emerald-50", text: "text-emerald-500", border: "border-emerald-500/20" },
+    "Cancelled": { bg: isDarkMode ? "bg-red-500/10" : "bg-red-50", text: "text-red-500", border: "border-red-500/20" }
   }
 
+  const config = statusConfig[drive.status] || statusConfig["Scheduled"]
+
   return (
-    <div className="bg-white rounded-xl border border-zinc-200 p-4 hover:border-zinc-300 transition-all group shadow-sm">
-      <div className="flex justify-between items-start mb-3">
+    <div className={`group relative rounded-xl p-4 transition-all hover:scale-[1.01]
+      ${isDarkMode
+        ? 'bg-white/[0.03] border border-white/10 hover:border-white/20'
+        : 'bg-white border border-gray-200 hover:shadow-lg'}`}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
         <div>
-          <h4 className="font-semibold text-sm text-zinc-900">{drive.customerName}</h4>
-          <div className="flex items-center gap-1.5 text-xs text-zinc-500 mt-1">
+          <h4 className={`font-semibold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            {drive.customerName}
+          </h4>
+          <div className={`flex items-center gap-1.5 text-xs mt-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
             <Car className="h-3.5 w-3.5" />
-            {drive.vehicle}
+            <span className="truncate">{drive.vehicle}</span>
           </div>
         </div>
-        <Badge variant="secondary" className={`text-[10px] px-2 py-0.5 border font-medium ${statusColors[drive.status] || "bg-zinc-100"}`}>
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${config.bg} ${config.text} ${config.border}`}>
           {drive.status}
-        </Badge>
+        </span>
       </div>
 
-      <div className="flex items-center gap-4 text-xs text-zinc-500 mb-4 bg-zinc-50/50 p-2 rounded-lg border border-zinc-100">
+      {/* Time Info */}
+      <div className={`flex items-center gap-4 text-xs p-2.5 rounded-lg mb-3
+        ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
         <div className="flex items-center gap-1.5">
-          <Calendar className="h-3.5 w-3.5 text-zinc-400" />
-          {format(parseISO(drive.date), "MMM d")}
+          <Calendar className={`h-3.5 w-3.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+          <span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>
+            {format(parseISO(drive.date), "MMM d")}
+          </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Clock className="h-3.5 w-3.5 text-zinc-400" />
-          {drive.time} <span className="text-zinc-300">|</span> {drive.duration}m
+          <Clock className={`h-3.5 w-3.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+          <span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>
+            {drive.time}
+          </span>
         </div>
+        <span className={`px-1.5 py-0.5 rounded text-[9px] ${isDarkMode ? 'bg-white/10 text-gray-400' : 'bg-gray-200 text-gray-500'}`}>
+          {drive.duration}m
+        </span>
       </div>
 
-      {drive.assignedToName && (
-        <div className="flex items-center gap-2 mb-4">
-          <Avatar className="h-6 w-6 border border-zinc-100">
-            <AvatarImage src={drive.assignedToImage} />
-            <AvatarFallback className="text-[9px] bg-zinc-100 text-zinc-600">{drive.assignedToName[0]}</AvatarFallback>
-          </Avatar>
-          <span className="text-[11px] text-zinc-600">Assigned to <span className="font-medium text-zinc-900">{drive.assignedToName}</span></span>
-        </div>
-      )}
-
+      {/* Rating (if completed) */}
       {drive.status === "Completed" && drive.rating && (
-        <div className="flex items-center gap-2 mb-4 bg-yellow-50/80 p-2 rounded-lg border border-yellow-100/50">
+        <div className={`flex items-center gap-2 text-xs p-2 rounded-lg mb-3
+          ${isDarkMode ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-100'}`}>
           <div className="flex gap-0.5">
             {[...Array(5)].map((_, i) => (
-              <Star key={i} className={`h-3 w-3 ${i < drive.rating! ? "text-yellow-400 fill-current" : "text-zinc-200"}`} />
+              <Star key={i} className={`h-3 w-3 ${i < drive.rating! ? "text-amber-400 fill-amber-400" : isDarkMode ? "text-gray-600" : "text-gray-300"}`} />
             ))}
           </div>
-          {drive.feedback && <span className="text-[10px] text-zinc-600 truncate flex-1 border-l border-yellow-200 pl-2">{drive.feedback}</span>}
+          {drive.feedback && (
+            <span className={`truncate flex-1 ${isDarkMode ? 'text-amber-300' : 'text-amber-700'}`}>
+              {drive.feedback}
+            </span>
+          )}
         </div>
       )}
 
-      <div className="flex gap-2 mt-auto">
+      {/* Actions */}
+      <div className="flex gap-2">
         {drive.status === "Scheduled" && (
-          <Button size="sm" variant="outline" className="w-full h-8 text-xs font-medium border-zinc-200 hover:bg-zinc-50 hover:text-zinc-900" onClick={() => onUpdateStatus(drive.id, "In Progress")}>
+          <button
+            onClick={() => onUpdateStatus(drive.id, "In Progress")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors
+              ${isDarkMode
+                ? 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          >
+            <Play className="h-3.5 w-3.5" />
             Start Drive
-          </Button>
+          </button>
         )}
         {drive.status === "In Progress" && (
-          <Button size="sm" className="w-full h-8 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-white shadow-none" onClick={() => onUpdateStatus(drive.id, "Completed")}>
-            Complete Drive
-          </Button>
+          <button
+            onClick={() => onUpdateStatus(drive.id, "Completed")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors
+              ${isDarkMode
+                ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30'
+                : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Complete
+          </button>
         )}
         {drive.status === "Completed" && (
-          <Button size="sm" variant="ghost" className="w-full h-8 text-xs text-emerald-600 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-700" disabled>
-            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Completed
-          </Button>
+          <div className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium
+            ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Completed
+          </div>
         )}
       </div>
     </div>

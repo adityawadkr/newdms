@@ -1,0 +1,407 @@
+import React, { useState, useEffect, useRef } from 'react';
+import * as THREE from 'three';
+import { 
+  LucideSearch, 
+  LucideMenu, 
+  LucideX, 
+  LucideArrowRight, 
+  LucideSun, 
+  LucideMoon, 
+  LucideLayoutDashboard,
+  LucideCar,
+  LucideBox,
+  LucideUsers,
+  LucideSettings,
+  LucideBell,
+  LucidePlus,
+  LucideChevronDown,
+  LucideMoreVertical
+} from 'lucide-react';
+
+/**
+ * ------------------------------------------------------------------
+ * 3D SCENE: "LIQUID LUXURY BACKGROUND"
+ * Subtle, ambient background that adapts to the theme.
+ * ------------------------------------------------------------------
+ */
+const LuxuryBackground = ({ isDarkMode }) => {
+  const mountRef = useRef(null);
+
+  useEffect(() => {
+    if (!mountRef.current) return;
+
+    const scene = new THREE.Scene();
+    scene.background = null; 
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 10);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    mountRef.current.appendChild(renderer.domElement);
+
+    // Abstract flowing geometry
+    const geometry = new THREE.IcosahedronGeometry(4, 2); // Less detail for smoother look
+    const material = new THREE.MeshPhysicalMaterial({
+      color: isDarkMode ? 0x111111 : 0xffffff,
+      metalness: 0.8,
+      roughness: 0.2,
+      reflectivity: 1.0,
+      clearcoat: 1.0,
+      wireframe: true, // Wireframe for a technical/architectural feel
+      transparent: true,
+      opacity: 0.1
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    const light1 = new THREE.DirectionalLight(0xffffff, 2);
+    light1.position.set(5, 5, 5);
+    scene.add(light1);
+
+    const light2 = new THREE.PointLight(isDarkMode ? 0x4444ff : 0xffaa00, 1);
+    light2.position.set(-5, -5, -5);
+    scene.add(light2);
+
+    const clock = new THREE.Clock();
+    let frameId;
+
+    const animate = () => {
+      const t = clock.getElapsedTime();
+      mesh.rotation.y = t * 0.05;
+      mesh.rotation.x = Math.sin(t * 0.1) * 0.1;
+      
+      // Update color slightly based on theme
+      if (isDarkMode) {
+          material.color.setHex(0x111111);
+          light2.color.setHex(0x4444ff);
+      } else {
+          material.color.setHex(0xffffff);
+          light2.color.setHex(0xffaa00);
+      }
+      
+      renderer.render(scene, camera);
+      frameId = requestAnimationFrame(animate);
+    };
+    animate();
+
+    const handleResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(frameId);
+      if (mountRef.current) mountRef.current.removeChild(renderer.domElement);
+      geometry.dispose();
+      material.dispose();
+      renderer.dispose();
+    };
+  }, [isDarkMode]);
+
+  return <div ref={mountRef} className="fixed inset-0 z-0 pointer-events-none" />;
+};
+
+/**
+ * ------------------------------------------------------------------
+ * CUSTOM CHART COMPONENTS (SVG)
+ * Keeping it lightweight and styled perfectly.
+ * ------------------------------------------------------------------
+ */
+
+const ElegantLineChart = ({ isDarkMode }) => {
+    // Generate a smooth curve path
+    const pathData = "M0,150 C50,140 100,100 150,110 C200,120 250,80 300,60 C350,40 400,90 450,70 C500,50 550,20 600,30 L600,200 L0,200 Z";
+    const lineStroke = "M0,150 C50,140 100,100 150,110 C200,120 250,80 300,60 C350,40 400,90 450,70 C500,50 550,20 600,30";
+    
+    return (
+        <div className="relative w-full h-48 overflow-hidden">
+            <svg viewBox="0 0 600 200" className="w-full h-full preserve-3d">
+                <defs>
+                    <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor={isDarkMode ? "white" : "black"} stopOpacity="0.1" />
+                        <stop offset="100%" stopColor={isDarkMode ? "white" : "black"} stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+                {/* Grid Lines */}
+                {[40, 80, 120, 160].map(y => (
+                    <line key={y} x1="0" y1={y} x2="600" y2={y} stroke={isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} strokeWidth="1" />
+                ))}
+                
+                {/* Area Fill */}
+                <path d={pathData} fill="url(#chartGradient)" />
+                
+                {/* Line Stroke */}
+                <path d={lineStroke} fill="none" stroke={isDarkMode ? "white" : "black"} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+            </svg>
+            
+            {/* Tooltip Simulation */}
+            <div className={`absolute top-[20%] left-[60%] px-3 py-2 text-xs backdrop-blur-md border border-opacity-20 rounded-lg shadow-xl
+                ${isDarkMode ? 'bg-white/10 border-white text-white' : 'bg-black/5 border-black text-black'}
+            `}>
+                <div className="font-mono opacity-50 text-[10px] uppercase">May Sales</div>
+                <div className="font-serif text-lg">€240k</div>
+            </div>
+        </div>
+    );
+};
+
+const LuxuryDonutChart = ({ isDarkMode }) => {
+    return (
+        <div className="relative w-40 h-40 mx-auto flex items-center justify-center">
+             <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                {/* Background Circle */}
+                <circle cx="50" cy="50" r="40" fill="none" stroke={isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"} strokeWidth="8" />
+                
+                {/* Value Circle (Segment 1) */}
+                <circle cx="50" cy="50" r="40" fill="none" stroke={isDarkMode ? "white" : "black"} strokeWidth="8" 
+                        strokeDasharray="180 251" strokeLinecap="round" className="drop-shadow-lg" />
+            </svg>
+            <div className={`absolute text-center ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                <div className="text-2xl font-serif">100</div>
+                <div className="text-[9px] font-mono tracking-widest opacity-50 uppercase">Total</div>
+            </div>
+        </div>
+    );
+};
+
+
+/**
+ * ------------------------------------------------------------------
+ * DASHBOARD COMPONENTS
+ * ------------------------------------------------------------------
+ */
+
+const SidebarItem = ({ icon: Icon, label, active, isDarkMode }) => (
+    <div className={`
+        group flex items-center gap-4 px-6 py-4 cursor-pointer transition-all duration-300 border-l-2
+        ${active 
+            ? (isDarkMode ? 'border-white bg-white/5 text-white' : 'border-black bg-black/5 text-black') 
+            : 'border-transparent opacity-50 hover:opacity-100 hover:bg-gray-500/5'
+        }
+        ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}
+    `}>
+        <Icon size={18} strokeWidth={1.5} />
+        <span className="text-xs font-bold tracking-widest uppercase">{label}</span>
+    </div>
+);
+
+const StatPanel = ({ title, value, sub, trend, isDarkMode }) => (
+    <div className={`
+        relative p-6 border transition-all duration-500 hover:shadow-2xl overflow-hidden group
+        ${isDarkMode ? 'border-white/10 bg-black/40 hover:bg-black/60' : 'border-black/10 bg-white/60 hover:bg-white/80'}
+        backdrop-blur-md
+    `}>
+        <div className="flex justify-between items-start mb-4">
+            <h3 className="text-[10px] font-mono uppercase tracking-[0.2em] opacity-50">{title}</h3>
+            {/* Elegant trend indicator */}
+            <div className={`text-xs flex items-center gap-1 ${trend > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {trend > 0 ? '+' : ''}{trend}%
+            </div>
+        </div>
+        
+        <div className="relative z-10">
+            <div className="text-3xl font-serif mb-1">{value}</div>
+            <div className="text-[10px] opacity-40 font-light">{sub}</div>
+        </div>
+
+        {/* Hover Effect: Subtle sheen */}
+        <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer`} />
+    </div>
+);
+
+export default function LuxuryDashboard() {
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  const bgClass = isDarkMode ? 'bg-[#050505]' : 'bg-[#F2F2F2]';
+  const textClass = isDarkMode ? 'text-white' : 'text-black';
+  const borderClass = isDarkMode ? 'border-white/10' : 'border-black/10';
+
+  return (
+    <div className={`flex h-screen w-full transition-colors duration-700 ease-in-out font-sans ${bgClass} ${textClass} overflow-hidden selection:bg-gray-500 selection:text-white`}>
+      
+      {/* 3D Background */}
+      <LuxuryBackground isDarkMode={isDarkMode} />
+
+      {/* Sidebar */}
+      <aside className={`w-64 flex-shrink-0 z-20 flex flex-col border-r backdrop-blur-xl ${borderClass} ${isDarkMode ? 'bg-black/20' : 'bg-white/20'}`}>
+        <div className="p-8 mb-8">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-full border flex items-center justify-center ${isDarkMode ? 'border-white' : 'border-black'}`}>
+                    <span className="font-serif italic font-bold text-lg">M</span>
+                </div>
+                <div className="text-xs font-bold tracking-[0.3em] uppercase">Mercurius</div>
+            </div>
+        </div>
+
+        <nav className="flex-1 space-y-1">
+            <div className="px-6 pb-2 text-[9px] font-mono opacity-30 uppercase tracking-widest">Overview</div>
+            <SidebarItem icon={LucideLayoutDashboard} label="Dashboard" active={true} isDarkMode={isDarkMode} />
+            
+            <div className="px-6 pb-2 mt-8 text-[9px] font-mono opacity-30 uppercase tracking-widest">Operations</div>
+            <SidebarItem icon={LucideCar} label="Inventory" isDarkMode={isDarkMode} />
+            <SidebarItem icon={LucideBox} label="Spare Parts" isDarkMode={isDarkMode} />
+            
+            <div className="px-6 pb-2 mt-8 text-[9px] font-mono opacity-30 uppercase tracking-widest">Sales</div>
+            <SidebarItem icon={LucideUsers} label="Leads" isDarkMode={isDarkMode} />
+        </nav>
+
+        <div className="p-6">
+            <div className={`flex items-center gap-3 p-3 rounded-lg border ${borderClass} ${isDarkMode ? 'bg-white/5' : 'bg-black/5'}`}>
+                <div className="w-8 h-8 rounded-full bg-gray-500 overflow-hidden">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold truncate">Habibi Admin</div>
+                    <div className="text-[9px] opacity-50 truncate">admin@forexzig.com</div>
+                </div>
+                <LucideSettings size={14} className="opacity-50" />
+            </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 z-10 flex flex-col min-w-0 overflow-hidden">
+        
+        {/* Header */}
+        <header className={`h-20 flex items-center justify-between px-8 border-b backdrop-blur-md ${borderClass}`}>
+            {/* Breadcrumbs / Title */}
+            <div className="flex items-center gap-4">
+                <button className="lg:hidden"><LucideMenu size={20} /></button>
+                <div className="flex items-center gap-2 text-xs font-medium tracking-wide opacity-60">
+                    <span>Dashboard</span>
+                    <span className="opacity-30">/</span>
+                    <span className={isDarkMode ? 'text-white opacity-100' : 'text-black opacity-100'}>Overview</span>
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-6">
+                {/* Search Pill */}
+                <div className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${borderClass} ${isDarkMode ? 'bg-white/5 focus-within:bg-white/10' : 'bg-black/5 focus-within:bg-black/10'}`}>
+                    <LucideSearch size={14} className="opacity-50" />
+                    <input 
+                        type="text" 
+                        placeholder="Search..." 
+                        className="bg-transparent border-none outline-none text-xs w-32 focus:w-48 transition-all placeholder-current opacity-50"
+                    />
+                </div>
+
+                <div className="h-4 w-[1px] bg-current opacity-10" />
+
+                <button className="flex items-center gap-2 text-xs font-bold tracking-widest hover:opacity-70 transition-opacity">
+                    <LucidePlus size={14} />
+                    <span>QUICK ADD</span>
+                </button>
+
+                <div className="flex items-center gap-4">
+                    <button 
+                        onClick={() => setIsDarkMode(!isDarkMode)} 
+                        className="p-2 rounded-full hover:bg-current hover:bg-opacity-10 transition-colors"
+                    >
+                        {isDarkMode ? <LucideSun size={16} /> : <LucideMoon size={16} />}
+                    </button>
+                    <button className="relative p-2 rounded-full hover:bg-current hover:bg-opacity-10 transition-colors">
+                        <LucideBell size={16} />
+                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-8 scrollbar-hide">
+            
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                <StatPanel 
+                    title="Total Revenue" 
+                    value="₹45.2L" 
+                    sub="vs last month" 
+                    trend={20.1} 
+                    isDarkMode={isDarkMode} 
+                />
+                <StatPanel 
+                    title="Active Leads" 
+                    value="124" 
+                    sub="vs last month" 
+                    trend={12.5} 
+                    isDarkMode={isDarkMode} 
+                />
+                <StatPanel 
+                    title="Vehicles Sold" 
+                    value="38" 
+                    sub="vs last month" 
+                    trend={-4.5} 
+                    isDarkMode={isDarkMode} 
+                />
+                <StatPanel 
+                    title="Service Bookings" 
+                    value="89" 
+                    sub="vs last month" 
+                    trend={8.2} 
+                    isDarkMode={isDarkMode} 
+                />
+            </div>
+
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Main Line Chart */}
+                <div className={`col-span-2 p-8 border backdrop-blur-md ${borderClass} ${isDarkMode ? 'bg-black/30' : 'bg-white/50'}`}>
+                    <div className="flex justify-between items-center mb-8">
+                        <div>
+                            <h2 className="text-lg font-serif mb-1">Sales Performance</h2>
+                            <p className="text-[10px] font-mono uppercase tracking-widest opacity-40">Revenue vs Leads over time</p>
+                        </div>
+                        <div className={`flex items-center gap-2 px-3 py-1.5 border rounded-md text-xs font-medium cursor-pointer ${borderClass}`}>
+                            <span>This Year</span>
+                            <LucideChevronDown size={12} />
+                        </div>
+                    </div>
+                    <ElegantLineChart isDarkMode={isDarkMode} />
+                </div>
+
+                {/* Donut Chart */}
+                <div className={`p-8 border backdrop-blur-md ${borderClass} ${isDarkMode ? 'bg-black/30' : 'bg-white/50'}`}>
+                    <div className="mb-8">
+                        <h2 className="text-lg font-serif mb-1">Inventory Status</h2>
+                        <p className="text-[10px] font-mono uppercase tracking-widest opacity-40">Vehicle stock distribution</p>
+                    </div>
+                    
+                    <div className="py-4">
+                        <LuxuryDonutChart isDarkMode={isDarkMode} />
+                    </div>
+
+                    <div className="mt-8 space-y-4">
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="opacity-60">In Stock</span>
+                            <span className="font-bold">45%</span>
+                        </div>
+                        <div className="w-full h-[1px] bg-current opacity-10" />
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="opacity-60">Booked</span>
+                            <span className="font-bold">25%</span>
+                        </div>
+                        <div className="w-full h-[1px] bg-current opacity-10" />
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="opacity-60">In Transit</span>
+                            <span className="font-bold">15%</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+      </main>
+    </div>
+  );
+}
