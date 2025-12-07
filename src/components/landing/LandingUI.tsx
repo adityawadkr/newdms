@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import gsap from "gsap"
 
 export default function LandingUI() {
     const cursorRef = useRef<HTMLDivElement>(null)
     const preloaderRef = useRef<HTMLDivElement>(null)
+    const [isLoaded, setIsLoaded] = useState(false)
 
     useEffect(() => {
         // --- CURSOR ---
@@ -40,6 +41,9 @@ export default function LandingUI() {
     }, [])
 
     useEffect(() => {
+        // Set loaded state after a short delay to trigger CSS transitions
+        const timer = setTimeout(() => setIsLoaded(true), 100)
+
         // --- ANIMATION ---
         // Intro
         const tl = gsap.timeline()
@@ -49,12 +53,10 @@ export default function LandingUI() {
                 duration: 1.5,
                 delay: 1,
                 pointerEvents: "none",
-            }).to(
-                ".reveal-text",
-                { y: 0, opacity: 1, duration: 1.5, stagger: 0.2 },
-                "-=1.5"
-            )
+            })
         }
+
+        return () => clearTimeout(timer)
     }, [])
 
     return (
@@ -127,18 +129,18 @@ export default function LandingUI() {
                     className="h-screen w-full flex items-center px-10 md:px-24 relative"
                 >
                     <div className="z-10 pointer-events-auto">
-                        <h1 className="font-serif text-[clamp(3rem,8vw,9rem)] leading-none tracking-[-0.01em] font-normal mb-8 reveal-text translate-y-10 opacity-0 text-white">
+                        <h1 className={`font-serif text-[clamp(3rem,8vw,9rem)] leading-none tracking-[-0.01em] font-normal mb-8 text-white transition-all duration-1000 ease-out ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                             SYSTEM
                             <br />
                             <span className="italic text-gray-400">INTEGRATED.</span>
                         </h1>
-                        <p className="font-sans text-gray-400 max-w-md text-sm leading-relaxed mb-10 reveal-text translate-y-10 opacity-0">
+                        <p className={`font-sans text-gray-400 max-w-md text-sm leading-relaxed mb-10 transition-all duration-1000 ease-out delay-200 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                             The operating system for the automotive avant-garde. Redefining
                             dealer management through sensual purity and absolute data
                             precision.
                         </p>
                         <Link href="/login">
-                            <button className="bg-white text-black px-12 py-4 rounded-full font-sans font-semibold text-sm transition-transform duration-300 hover:scale-105 reveal-text translate-y-10 opacity-0">
+                            <button className={`bg-white text-black px-12 py-4 rounded-full font-sans font-semibold text-sm transition-all duration-1000 ease-out delay-400 hover:scale-105 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                                 Login to Platform
                             </button>
                         </Link>
