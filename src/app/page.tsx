@@ -224,22 +224,49 @@ export default function LandingPage() {
             <h3 className="font-serif text-3xl md:text-4xl text-white mb-8">Elevate Your Enterprise.</h3>
             <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-center">
               <Link href="/register"><button className="bg-[#ffffff] text-black px-8 md:px-10 py-4 rounded-full font-sans font-semibold text-sm tracking-widest uppercase">Request Full Demo</button></Link>
-              <button className="px-8 md:px-10 py-4 rounded-full border border-white/30 text-white font-sans text-xs font-bold tracking-widest uppercase">View Pricing Tiers</button>
+              <Link href="/pricing"><button className="px-8 md:px-10 py-4 rounded-full border border-white/30 text-white font-sans text-xs font-bold tracking-widest uppercase hover:bg-white/10 transition-colors">View Pricing Tiers</button></Link>
             </div>
           </div>
         </section>
 
-        <footer className="bg-black py-20 px-6 md:px-24 border-t border-white/10 relative z-20 text-white">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-10">
-            <div>
-              <h2 className="font-serif text-4xl mb-6">NEXUS</h2>
-              <div className="flex gap-6 font-sans text-xs text-gray-500 uppercase tracking-wider">
-                <a href="#" className="hover:text-white transition-colors">Contact</a>
-                <a href="#" className="hover:text-white transition-colors">Legal</a>
-                <a href="#" className="hover:text-white transition-colors">Privacy</a>
-              </div>
+        <footer className="bg-black py-24 px-6 md:px-24 border-t border-white/10 relative z-20 text-white">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-20">
+            <div className="col-span-1 md:col-span-1">
+              <h2 className="font-serif text-3xl mb-6">NEXUS</h2>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                Redefining automotive retail with precision, elegance, and intelligence.
+              </p>
             </div>
-            <p className="font-sans text-xs text-gray-600">© 2025 NEXUS Automotive Systems.<br />Designed in Stuttgart.</p>
+            <div>
+              <h4 className="font-bold text-xs tracking-widest uppercase mb-6 text-white">Product</h4>
+              <ul className="space-y-4 text-sm text-gray-500">
+                <li><Link href="/features" className="hover:text-white transition-colors">Features</Link></li>
+                <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
+                <li><Link href="/integrations" className="hover:text-white transition-colors">Integrations</Link></li>
+                <li><Link href="/changelog" className="hover:text-white transition-colors">Changelog</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-xs tracking-widest uppercase mb-6 text-white">Company</h4>
+              <ul className="space-y-4 text-sm text-gray-500">
+                <li><Link href="/about" className="hover:text-white transition-colors">About</Link></li>
+                <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
+                <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+                <li><Link href="/partners" className="hover:text-white transition-colors">Partners</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-xs tracking-widest uppercase mb-6 text-white">Legal</h4>
+              <ul className="space-y-4 text-sm text-gray-500">
+                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+                <li><Link href="/security" className="hover:text-white transition-colors">Security</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex flex-col md:flex-row justify-between items-end pt-8 border-t border-white/5">
+            <p className="font-sans text-xs text-gray-600">© 2025 NEXUS Automotive Systems. All rights reserved.</p>
+            <p className="font-sans text-xs text-gray-600 mt-4 md:mt-0">Designed in Stuttgart. Engineered in Silicon Valley.</p>
           </div>
         </footer>
       </div>

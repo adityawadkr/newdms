@@ -80,7 +80,7 @@ export default function LoginPage() {
                 className="w-full max-w-md relative z-10"
             >
                 <div className="mb-12 text-center">
-                    <h1 className="font-serif text-4xl md:text-5xl italic mb-4 tracking-wide">
+                    <h1 className="font-serif text-4xl md:text-5xl mb-4 tracking-wide">
                         System Access
                     </h1>
                     <p className="text-gray-500 text-sm tracking-widest uppercase">

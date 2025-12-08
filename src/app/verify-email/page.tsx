@@ -20,18 +20,7 @@ function VerifyEmailContent() {
     const inputRefs = React.useRef<(HTMLInputElement | null)[]>([])
 
     React.useEffect(() => {
-        const tl = gsap.timeline()
-        if (containerRef.current && formRef.current) {
-            tl.fromTo(containerRef.current,
-                { opacity: 0 },
-                { opacity: 1, duration: 1.5, ease: "power2.out" }
-            )
-                .fromTo(formRef.current,
-                    { y: 50, opacity: 0 },
-                    { y: 0, opacity: 1, duration: 1, ease: "power3.out" },
-                    "-=1"
-                )
-        }
+        // CSS animation handles entrance
     }, [])
 
     const handleOtpChange = (index: number, value: string) => {
@@ -58,11 +47,11 @@ function VerifyEmailContent() {
         return (
             <div className="min-h-screen w-full bg-black text-white flex flex-col items-center justify-center p-4">
                 <div className="text-center">
-                    <h1 className="font-serif text-3xl italic mb-4">Error</h1>
+                    <h1 className="font-serif text-3xl mb-4">Error</h1>
                     <p className="text-gray-500 mb-8">Email address is missing.</p>
                     <button
                         onClick={() => router.push("/register")}
-                        className="bg-white text-black px-8 py-3 text-sm uppercase tracking-widest font-bold hover:bg-gray-200 transition-colors"
+                        className="bg-[#ffffff] text-black px-8 py-3 text-sm uppercase tracking-widest font-bold hover:bg-gray-200 transition-colors"
                     >
                         Back to Sign Up
                     </button>
@@ -98,7 +87,7 @@ function VerifyEmailContent() {
     return (
         <div
             ref={containerRef}
-            className="min-h-screen w-full bg-black text-white flex flex-col items-center justify-center p-4 relative overflow-hidden"
+            className="min-h-screen w-full bg-black text-white flex flex-col items-center justify-center p-4 relative overflow-hidden animate-fade-up"
         >
             {/* Background Lines */}
             <div className="absolute inset-0 pointer-events-none">
@@ -117,7 +106,7 @@ function VerifyEmailContent() {
             {/* Form */}
             <div ref={formRef} className="w-full max-w-md relative z-10">
                 <div className="mb-12 text-center">
-                    <h1 className="font-serif text-4xl md:text-5xl italic mb-4 tracking-wide">
+                    <h1 className="font-serif text-4xl md:text-5xl mb-4 tracking-wide">
                         Verify Email
                     </h1>
                     <p className="text-gray-500 text-sm tracking-widest uppercase mb-2">
@@ -153,7 +142,7 @@ function VerifyEmailContent() {
                     <button
                         type="submit"
                         disabled={loading || otp.join("").length !== 6}
-                        className="w-full bg-white text-black py-4 text-sm uppercase tracking-widest font-bold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-[#ffffff] text-black py-4 text-sm uppercase tracking-widest font-bold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? "Verifying..." : "Verify Email"}
                     </button>

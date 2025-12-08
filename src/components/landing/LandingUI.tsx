@@ -510,7 +510,7 @@ export default function LandingUI() {
                             <p className="font-sans text-xs text-gray-600">
                                 © 2025 NEXUS Automotive Systems.
                                 <br />
-                                Designed in Stuttgart.
+                                Designed in Baramati.
                             </p>
                         </div>
                     </div>

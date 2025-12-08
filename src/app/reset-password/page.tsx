@@ -67,7 +67,7 @@ function ResetPasswordContent() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </div>
-                    <h1 className="font-serif text-3xl italic mb-4">Invalid Link</h1>
+                    <h1 className="font-serif text-3xl mb-4">Invalid Link</h1>
                     <p className="text-gray-500 mb-8 max-w-sm">This password reset link is invalid or has expired.</p>
                     <Link href="/forgot-password">
                         <button className="bg-[#ffffff] text-black px-8 py-3 text-sm uppercase tracking-widest font-bold hover:bg-gray-200 transition-colors">
@@ -101,7 +101,7 @@ function ResetPasswordContent() {
             {/* Form */}
             <div ref={formRef} className="w-full max-w-md relative z-10">
                 <div className="mb-12 text-center">
-                    <h1 className="font-serif text-4xl md:text-5xl italic mb-4 tracking-wide">
+                    <h1 className="font-serif text-4xl md:text-5xl mb-4 tracking-wide">
                         New Password
                     </h1>
                     <p className="text-gray-500 text-sm tracking-widest uppercase">

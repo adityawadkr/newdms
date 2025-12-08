@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
             {/* Form */}
             <div ref={formRef} className="w-full max-w-md relative z-10">
                 <div className="mb-12 text-center">
-                    <h1 className="font-serif text-4xl md:text-5xl italic mb-4 tracking-wide">
+                    <h1 className="font-serif text-4xl md:text-5xl mb-4 tracking-wide">
                         Recover Access
                     </h1>
                     <p className="text-gray-500 text-sm tracking-widest uppercase">
