@@ -18,6 +18,25 @@ const manrope = Manrope({
 export default function LandingPage() {
   return (
     <main className={`${playfair.variable} ${manrope.variable} font-sans bg-[#020202] min-h-screen text-white overflow-x-hidden`}>
+      {/* Server-side CSS for preloader animation */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes fadeOut { 0%, 70% { opacity: 1; } 100% { opacity: 0; pointer-events: none; } }
+        .preloader-spin { animation: spin 10s linear infinite; }
+        .preloader-fadeout { animation: fadeOut 2.5s ease-out forwards; }
+      `}} />
+
+      {/* PRELOADER - Server rendered, CSS animation */}
+      <div className="preloader-fadeout fixed inset-0 bg-black z-[100] flex flex-col justify-center items-center">
+        <div className="preloader-spin w-[50px] h-[50px] border border-[#333] rounded-full flex items-center justify-center mb-5 relative">
+          <div className="w-[1px] h-[30px] bg-white absolute"></div>
+          <div className="w-[1px] h-[30px] bg-white absolute" style={{ transform: 'rotate(60deg)' }}></div>
+          <div className="w-[1px] h-[30px] bg-white absolute" style={{ transform: 'rotate(-60deg)' }}></div>
+        </div>
+        <div className="font-serif italic text-gray-500 tracking-widest text-sm">Vision Iconic</div>
+      </div>
+
       {/* Client wrapper for 3D scene and cursor - loads after page */}
       <ClientWrapper />
 
@@ -51,7 +70,7 @@ export default function LandingPage() {
               dealer management through sensual purity and absolute data precision.
             </p>
             <Link href="/login">
-              <button className="bg-white text-black px-8 md:px-12 py-4 rounded-full font-sans font-semibold text-sm hover:scale-105 transition-transform">
+              <button className="bg-white text-black px-8 md:px-12 py-4 rounded-full font-sans font-semibold text-sm">
                 Login to Platform
               </button>
             </Link>
@@ -202,8 +221,8 @@ export default function LandingPage() {
           <div className="mt-24 w-full flex flex-col items-center justify-center text-center">
             <h3 className="font-serif text-3xl md:text-4xl text-white mb-8">Elevate Your Enterprise.</h3>
             <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-center">
-              <Link href="/register"><button className="bg-white text-black px-8 md:px-10 py-4 rounded-full font-sans font-semibold text-sm tracking-widest uppercase hover:scale-105 transition-transform">Request Full Demo</button></Link>
-              <button className="px-8 md:px-10 py-4 rounded-full border border-white/30 text-white font-sans text-xs font-bold tracking-widest uppercase hover:bg-white hover:text-black transition-all duration-300">View Pricing Tiers</button>
+              <Link href="/register"><button className="bg-white text-black px-8 md:px-10 py-4 rounded-full font-sans font-semibold text-sm tracking-widest uppercase">Request Full Demo</button></Link>
+              <button className="px-8 md:px-10 py-4 rounded-full border border-white/30 text-white font-sans text-xs font-bold tracking-widest uppercase">View Pricing Tiers</button>
             </div>
           </div>
         </section>
