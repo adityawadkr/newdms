@@ -25,12 +25,12 @@ export default function LandingPage() {
         @-webkit-keyframes spin { from { -webkit-transform: rotate(0deg); } to { -webkit-transform: rotate(360deg); } }
         @keyframes fadeOut { 0%, 70% { opacity: 1; } 100% { opacity: 0; pointer-events: none; } }
         @-webkit-keyframes fadeOut { 0%, 70% { opacity: 1; } 100% { opacity: 0; pointer-events: none; } }
-        .preloader-spin { animation: spin 10s linear infinite; -webkit-animation: spin 10s linear infinite; }
-        .preloader-fadeout { animation: fadeOut 2.5s ease-out forwards; -webkit-animation: fadeOut 2.5s ease-out forwards; }
+        .preloader-spin { animation: spin 3s linear infinite; -webkit-animation: spin 3s linear infinite; }
+        .preloader-fadeout { animation: fadeOut 4s ease-out forwards; -webkit-animation: fadeOut 4s ease-out forwards; }
       `}} />
 
       {/* PRELOADER - Server rendered, CSS animation */}
-      <div className="preloader-fadeout fixed inset-0 bg-black z-[100] flex flex-col justify-center items-center">
+      <div className="preloader-fadeout fixed inset-0 bg-black z-[9999] flex flex-col justify-center items-center">
         <div className="preloader-spin w-[50px] h-[50px] border border-[#333] rounded-full flex items-center justify-center mb-5 relative">
           <div className="w-[1px] h-[30px] bg-white absolute"></div>
           <div className="w-[1px] h-[30px] bg-white absolute" style={{ transform: 'rotate(60deg)' }}></div>

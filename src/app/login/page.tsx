@@ -17,16 +17,7 @@ export default function LoginPage() {
     const formRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        // Optional animation enhancement - content already visible
-        try {
-            const tl = gsap.timeline()
-            if (containerRef.current && formRef.current) {
-                // Set opacity to 1 first to ensure visibility
-                gsap.set([containerRef.current, formRef.current], { opacity: 1 })
-            }
-        } catch (e) {
-            console.log('Animation skipped')
-        }
+        // CSS animation handles entrance
     }, [])
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -67,7 +58,7 @@ export default function LoginPage() {
     return (
         <div
             ref={containerRef}
-            className="min-h-screen w-full bg-black text-white flex flex-col items-center justify-center p-4 relative overflow-hidden"
+            className="min-h-screen w-full bg-black text-white flex flex-col items-center justify-center p-4 relative overflow-hidden animate-fade-up"
         >
             {/* Background Elements */}
             <div className="absolute inset-0 pointer-events-none">

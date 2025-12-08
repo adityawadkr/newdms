@@ -16,14 +16,7 @@ export default function ForgotPasswordPage() {
     const formRef = React.useRef<HTMLDivElement>(null)
 
     React.useEffect(() => {
-        // Optional animation - content already visible
-        try {
-            if (containerRef.current && formRef.current) {
-                gsap.set([containerRef.current, formRef.current], { opacity: 1 })
-            }
-        } catch (e) {
-            console.log('Animation skipped')
-        }
+        // CSS animation handles entrance
     }, [])
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -51,7 +44,7 @@ export default function ForgotPasswordPage() {
     return (
         <div
             ref={containerRef}
-            className="min-h-screen w-full bg-black text-white flex flex-col items-center justify-center p-4 relative overflow-hidden"
+            className="min-h-screen w-full bg-black text-white flex flex-col items-center justify-center p-4 relative overflow-hidden animate-fade-up"
         >
             {/* Background Lines */}
             <div className="absolute inset-0 pointer-events-none">

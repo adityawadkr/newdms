@@ -31,15 +31,9 @@ export default function RegisterPage() {
     guest_admin: "Guest Admin",
   }
 
+  // CSS animation handles entrance
   useEffect(() => {
-    // Optional animation - content already visible
-    try {
-      if (containerRef.current && formRef.current) {
-        gsap.set([containerRef.current, formRef.current], { opacity: 1 })
-      }
-    } catch (e) {
-      console.log('Animation skipped')
-    }
+    // Optional: Add any complex GSAP interactions here if needed
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,45 +75,12 @@ export default function RegisterPage() {
     }
   }
 
-  // Floating label component
-  const FloatingInput = ({
-    id,
-    type,
-    value,
-    onChange,
-    label
-  }: {
-    id: string;
-    type: string;
-    value: string;
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    label: string
-  }) => (
-    <div className="relative">
-      <label
-        htmlFor={id}
-        className={`absolute left-0 transition-all duration-200 ${value
-          ? '-top-5 text-xs text-white'
-          : 'top-3 text-sm text-gray-500'
-          }`}
-      >
-        {label}
-      </label>
-      <input
-        type={type}
-        id={id}
-        value={value}
-        onChange={onChange}
-        required
-        className="w-full bg-transparent border-b border-white/20 py-3 text-white focus:outline-none focus:border-white transition-colors"
-      />
-    </div>
-  )
+
 
   return (
     <div
       ref={containerRef}
-      className="min-h-screen w-full bg-black text-white flex flex-col items-center justify-center p-4 relative overflow-hidden"
+      className="min-h-screen w-full bg-black text-white flex flex-col items-center justify-center p-4 relative overflow-hidden animate-fade-up"
     >
       {/* Background Lines */}
       <div className="absolute inset-0 pointer-events-none">
@@ -240,3 +201,38 @@ export default function RegisterPage() {
     </div>
   )
 }
+
+// Floating label component defined outside to prevent re-renders losing focus
+const FloatingInput = ({
+  id,
+  type,
+  value,
+  onChange,
+  label
+}: {
+  id: string;
+  type: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  label: string
+}) => (
+  <div className="relative">
+    <label
+      htmlFor={id}
+      className={`absolute left-0 transition-all duration-200 ${value
+        ? '-top-5 text-xs text-white'
+        : 'top-3 text-sm text-gray-500'
+        }`}
+    >
+      {label}
+    </label>
+    <input
+      type={type}
+      id={id}
+      value={value}
+      onChange={onChange}
+      required
+      className="w-full bg-transparent border-b border-white/20 py-3 text-white focus:outline-none focus:border-white transition-colors"
+    />
+  </div>
+)
