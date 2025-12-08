@@ -17,19 +17,15 @@ export default function LoginPage() {
     const formRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        // Entrance Animation
-        const tl = gsap.timeline()
-
-        if (containerRef.current && formRef.current) {
-            tl.fromTo(containerRef.current,
-                { opacity: 0 },
-                { opacity: 1, duration: 1.5, ease: "power2.out" }
-            )
-                .fromTo(formRef.current,
-                    { y: 50, opacity: 0 },
-                    { y: 0, opacity: 1, duration: 1, ease: "power3.out" },
-                    "-=1"
-                )
+        // Optional animation enhancement - content already visible
+        try {
+            const tl = gsap.timeline()
+            if (containerRef.current && formRef.current) {
+                // Set opacity to 1 first to ensure visibility
+                gsap.set([containerRef.current, formRef.current], { opacity: 1 })
+            }
+        } catch (e) {
+            console.log('Animation skipped')
         }
     }, [])
 
@@ -108,8 +104,8 @@ export default function LoginPage() {
                             <label
                                 htmlFor="email"
                                 className={`absolute left-0 transition-all duration-200 ${email
-                                        ? '-top-5 text-xs text-white'
-                                        : 'top-3 text-sm text-gray-500'
+                                    ? '-top-5 text-xs text-white'
+                                    : 'top-3 text-sm text-gray-500'
                                     }`}
                             >
                                 Email Address
@@ -129,8 +125,8 @@ export default function LoginPage() {
                             <label
                                 htmlFor="password"
                                 className={`absolute left-0 transition-all duration-200 ${password
-                                        ? '-top-5 text-xs text-white'
-                                        : 'top-3 text-sm text-gray-500'
+                                    ? '-top-5 text-xs text-white'
+                                    : 'top-3 text-sm text-gray-500'
                                     }`}
                             >
                                 Password

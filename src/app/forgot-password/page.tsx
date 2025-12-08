@@ -16,17 +16,13 @@ export default function ForgotPasswordPage() {
     const formRef = React.useRef<HTMLDivElement>(null)
 
     React.useEffect(() => {
-        const tl = gsap.timeline()
-        if (containerRef.current && formRef.current) {
-            tl.fromTo(containerRef.current,
-                { opacity: 0 },
-                { opacity: 1, duration: 1.5, ease: "power2.out" }
-            )
-                .fromTo(formRef.current,
-                    { y: 50, opacity: 0 },
-                    { y: 0, opacity: 1, duration: 1, ease: "power3.out" },
-                    "-=1"
-                )
+        // Optional animation - content already visible
+        try {
+            if (containerRef.current && formRef.current) {
+                gsap.set([containerRef.current, formRef.current], { opacity: 1 })
+            }
+        } catch (e) {
+            console.log('Animation skipped')
         }
     }, [])
 
@@ -107,8 +103,8 @@ export default function ForgotPasswordPage() {
                             <label
                                 htmlFor="email"
                                 className={`absolute left-0 transition-all duration-200 ${email
-                                        ? '-top-5 text-xs text-white'
-                                        : 'top-3 text-sm text-gray-500'
+                                    ? '-top-5 text-xs text-white'
+                                    : 'top-3 text-sm text-gray-500'
                                     }`}
                             >
                                 Email Address

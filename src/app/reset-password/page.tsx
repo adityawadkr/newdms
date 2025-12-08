@@ -22,17 +22,13 @@ function ResetPasswordContent() {
     const token = searchParams.get("token")
 
     React.useEffect(() => {
-        const tl = gsap.timeline()
-        if (containerRef.current && formRef.current) {
-            tl.fromTo(containerRef.current,
-                { opacity: 0 },
-                { opacity: 1, duration: 1.5, ease: "power2.out" }
-            )
-                .fromTo(formRef.current,
-                    { y: 50, opacity: 0 },
-                    { y: 0, opacity: 1, duration: 1, ease: "power3.out" },
-                    "-=1"
-                )
+        // Optional animation - content already visible
+        try {
+            if (containerRef.current && formRef.current) {
+                gsap.set([containerRef.current, formRef.current], { opacity: 1 })
+            }
+        } catch (e) {
+            console.log('Animation skipped')
         }
     }, [])
 
@@ -126,8 +122,8 @@ function ResetPasswordContent() {
                         <label
                             htmlFor="password"
                             className={`absolute left-0 transition-all duration-200 ${password
-                                    ? '-top-5 text-xs text-white'
-                                    : 'top-3 text-sm text-gray-500'
+                                ? '-top-5 text-xs text-white'
+                                : 'top-3 text-sm text-gray-500'
                                 }`}
                         >
                             New Password
@@ -148,8 +144,8 @@ function ResetPasswordContent() {
                         <label
                             htmlFor="confirmPassword"
                             className={`absolute left-0 transition-all duration-200 ${confirmPassword
-                                    ? '-top-5 text-xs text-white'
-                                    : 'top-3 text-sm text-gray-500'
+                                ? '-top-5 text-xs text-white'
+                                : 'top-3 text-sm text-gray-500'
                                 }`}
                         >
                             Confirm Password
