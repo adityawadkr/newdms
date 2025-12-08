@@ -145,7 +145,7 @@ export default function PricingPage() {
                             <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
                         </div>
                     </div>
-                    <p className="font-sans text-xs text-gray-600">© 2025 NEXUS Automotive Systems.<br />Designed in Stuttgart.</p>
+                    <p className="font-sans text-xs text-gray-600">© 2025 NEXUS Automotive Systems.<br />Made with ❤️ in Baramati</p>
                 </div>
             </footer>
         </div>

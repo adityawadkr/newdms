@@ -266,7 +266,7 @@ export default function LandingPage() {
           </div>
           <div className="flex flex-col md:flex-row justify-between items-end pt-8 border-t border-white/5">
             <p className="font-sans text-xs text-gray-600">© 2025 NEXUS Automotive Systems. All rights reserved.</p>
-            <p className="font-sans text-xs text-gray-600 mt-4 md:mt-0">Designed in Stuttgart. Engineered in Silicon Valley.</p>
+            <p className="font-sans text-xs text-gray-600 mt-4 md:mt-0">Made with ❤️ in Baramati</p>
           </div>
         </footer>
       </div>
