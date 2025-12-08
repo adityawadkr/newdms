@@ -1,20 +1,18 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import Link from "next/link"
-import gsap from "gsap"
 
 export default function LandingUI() {
     const cursorRef = useRef<HTMLDivElement>(null)
     const preloaderRef = useRef<HTMLDivElement>(null)
-    const [isLoaded, setIsLoaded] = useState(false)
 
     useEffect(() => {
-        // --- CURSOR ---
+        // --- CURSOR (desktop only enhancement) ---
         const cursor = cursorRef.current
-        if (cursor) {
+        if (cursor && window.matchMedia('(pointer: fine)').matches) {
             const onMouseMove = (e: MouseEvent) => {
-                gsap.to(cursor, { x: e.clientX, y: e.clientY, duration: 0.1 })
+                cursor.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%, -50%)`
             }
             window.addEventListener("mousemove", onMouseMove)
 
@@ -28,52 +26,104 @@ export default function LandingUI() {
 
             return () => {
                 window.removeEventListener("mousemove", onMouseMove)
-                interactiveElements.forEach((el) => {
-                    el.removeEventListener("mouseenter", () =>
-                        cursor.classList.add("active")
-                    )
-                    el.removeEventListener("mouseleave", () =>
-                        cursor.classList.remove("active")
-                    )
-                })
             }
         }
     }, [])
 
     useEffect(() => {
-        // Set loaded state after a short delay to trigger CSS transitions
-        const timer = setTimeout(() => setIsLoaded(true), 100)
-
-        // --- ANIMATION ---
-        // Intro
-        const tl = gsap.timeline()
-        if (preloaderRef.current) {
-            tl.to(preloaderRef.current, {
-                opacity: 0,
-                duration: 1.5,
-                delay: 1,
-                pointerEvents: "none",
-            })
-        }
+        // Hide preloader after animation (fallback for CSS animation)
+        const timer = setTimeout(() => {
+            if (preloaderRef.current) {
+                preloaderRef.current.style.display = 'none'
+            }
+        }, 3000)
 
         return () => clearTimeout(timer)
     }, [])
 
     return (
         <>
+            {/* CSS-only animations for guaranteed visibility */}
+            <style jsx global>{`
+                @keyframes preloaderFadeOut {
+                    0% { opacity: 1; pointer-events: auto; }
+                    70% { opacity: 1; pointer-events: auto; }
+                    100% { opacity: 0; pointer-events: none; }
+                }
+                
+                @keyframes heroReveal {
+                    0% { opacity: 0; transform: translateY(20px); }
+                    100% { opacity: 1; transform: translateY(0); }
+                }
+                
+                .preloader-animate {
+                    animation: preloaderFadeOut 2.5s ease-out forwards;
+                }
+                
+                .hero-title {
+                    animation: heroReveal 1s ease-out 1.5s forwards;
+                    opacity: 0;
+                }
+                
+                .hero-desc {
+                    animation: heroReveal 1s ease-out 1.7s forwards;
+                    opacity: 0;
+                }
+                
+                .hero-button {
+                    animation: heroReveal 1s ease-out 1.9s forwards;
+                    opacity: 0;
+                }
+                
+                /* Fallback: if animations don't work, show content after 3s */
+                @supports not (animation-fill-mode: forwards) {
+                    .hero-title, .hero-desc, .hero-button {
+                        opacity: 1 !important;
+                        transform: translateY(0) !important;
+                    }
+                    .preloader-animate {
+                        display: none !important;
+                    }
+                }
+                
+                /* Force visibility for reduced motion preference */
+                @media (prefers-reduced-motion: reduce) {
+                    .hero-title, .hero-desc, .hero-button {
+                        opacity: 1 !important;
+                        transform: translateY(0) !important;
+                        animation: none !important;
+                    }
+                    .preloader-animate {
+                        display: none !important;
+                    }
+                }
+            `}</style>
+
+            {/* Noscript fallback - show content immediately without JS */}
+            <noscript>
+                <style>{`
+                    #preloader { display: none !important; }
+                    .hero-title, .hero-desc, .hero-button { 
+                        opacity: 1 !important; 
+                        transform: translateY(0) !important;
+                        animation: none !important;
+                    }
+                `}</style>
+            </noscript>
+
             <div
                 id="cursor"
                 ref={cursorRef}
-                className="fixed top-0 left-0 w-3 h-3 bg-white rounded-full pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 transition-transform duration-100 ease-out mix-blend-exclusion [&.active]:scale-[6] [&.active]:bg-[#D90429] [&.active]:mix-blend-normal [&.active]:opacity-20"
+                className="hidden md:block fixed top-0 left-0 w-3 h-3 bg-white rounded-full pointer-events-none z-[9999] transition-transform duration-100 ease-out mix-blend-exclusion [&.active]:scale-[6] [&.active]:bg-[#D90429] [&.active]:mix-blend-normal [&.active]:opacity-20"
             ></div>
 
-            {/* PRELOADER */}
+            {/* PRELOADER - CSS-only auto-hide */}
             <div
                 id="preloader"
                 ref={preloaderRef}
-                className="fixed inset-0 bg-black z-[100] flex flex-col justify-center items-center transition-opacity duration-[1200ms] ease-out"
+                className="preloader-animate fixed inset-0 bg-black z-[100] flex flex-col justify-center items-center"
             >
-                <div className="w-[50px] h-[50px] border border-[#333] rounded-full flex items-center justify-center mb-5 animate-[spin_10s_linear_infinite]">
+                <div className="w-[50px] h-[50px] border border-[#333] rounded-full flex items-center justify-center mb-5 animate-spin" style={{ animationDuration: '10s' }}>
                     <div className="w-[1px] h-[30px] bg-white absolute"></div>
                     <div className="w-[1px] h-[30px] bg-white absolute rotate-60"></div>
                     <div className="w-[1px] h-[30px] bg-white absolute -rotate-60"></div>
@@ -86,7 +136,7 @@ export default function LandingUI() {
             {/* CONTENT */}
             <div className="relative z-10 w-full pointer-events-none">
                 {/* Header */}
-                <nav className="w-full p-10 flex justify-between items-center fixed top-0 z-50 pointer-events-auto mix-blend-difference text-white">
+                <nav className="w-full p-6 md:p-10 flex justify-between items-center fixed top-0 z-50 pointer-events-auto mix-blend-difference text-white">
                     <div className="flex items-center gap-3">
                         <div className="w-6 h-6 border border-white rounded-full flex items-center justify-center">
                             <div className="w-[1px] h-3 bg-white"></div>
@@ -126,28 +176,28 @@ export default function LandingUI() {
                 {/* HERO SECTION */}
                 <section
                     id="system"
-                    className="h-screen w-full flex items-center px-10 md:px-24 relative"
+                    className="h-screen w-full flex items-center px-6 md:px-24 relative"
                 >
                     <div className="z-10 pointer-events-auto">
-                        <h1 className={`font-serif text-[clamp(3rem,8vw,9rem)] leading-none tracking-[-0.01em] font-normal mb-8 text-white transition-all duration-1000 ease-out ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+                        <h1 className="hero-title font-serif text-[clamp(2.5rem,8vw,9rem)] leading-none tracking-[-0.01em] font-normal mb-8 text-white">
                             SYSTEM
                             <br />
                             <span className="italic text-gray-400">INTEGRATED.</span>
                         </h1>
-                        <p className={`font-sans text-gray-400 max-w-md text-sm leading-relaxed mb-10 transition-all duration-1000 ease-out delay-200 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+                        <p className="hero-desc font-sans text-gray-400 max-w-md text-sm leading-relaxed mb-10">
                             The operating system for the automotive avant-garde. Redefining
                             dealer management through sensual purity and absolute data
                             precision.
                         </p>
                         <Link href="/login">
-                            <button className={`bg-white text-black px-12 py-4 rounded-full font-sans font-semibold text-sm transition-all duration-1000 ease-out delay-400 hover:scale-105 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+                            <button className="hero-button bg-white text-black px-8 md:px-12 py-4 rounded-full font-sans font-semibold text-sm hover:scale-105 transition-transform">
                                 Login to Platform
                             </button>
                         </Link>
                     </div>
 
                     {/* Scroll guidance */}
-                    <div className="absolute bottom-12 right-12 flex flex-col items-end gap-4 opacity-50 mix-blend-difference text-white">
+                    <div className="absolute bottom-12 right-6 md:right-12 flex flex-col items-end gap-4 opacity-50 mix-blend-difference text-white">
                         <span className="font-sans text-xs tracking-widest uppercase">
                             Scroll
                         </span>
