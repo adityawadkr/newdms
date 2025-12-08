@@ -22,9 +22,11 @@ export default function LandingPage() {
       <style dangerouslySetInnerHTML={{
         __html: `
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @-webkit-keyframes spin { from { -webkit-transform: rotate(0deg); } to { -webkit-transform: rotate(360deg); } }
         @keyframes fadeOut { 0%, 70% { opacity: 1; } 100% { opacity: 0; pointer-events: none; } }
-        .preloader-spin { animation: spin 10s linear infinite; }
-        .preloader-fadeout { animation: fadeOut 2.5s ease-out forwards; }
+        @-webkit-keyframes fadeOut { 0%, 70% { opacity: 1; } 100% { opacity: 0; pointer-events: none; } }
+        .preloader-spin { animation: spin 10s linear infinite; -webkit-animation: spin 10s linear infinite; }
+        .preloader-fadeout { animation: fadeOut 2.5s ease-out forwards; -webkit-animation: fadeOut 2.5s ease-out forwards; }
       `}} />
 
       {/* PRELOADER - Server rendered, CSS animation */}
@@ -70,7 +72,7 @@ export default function LandingPage() {
               dealer management through sensual purity and absolute data precision.
             </p>
             <Link href="/login">
-              <button className="bg-white text-black px-8 md:px-12 py-4 rounded-full font-sans font-semibold text-sm">
+              <button className="bg-[#ffffff] text-black px-8 md:px-12 py-4 rounded-full font-sans font-semibold text-sm">
                 Login to Platform
               </button>
             </Link>
@@ -221,7 +223,7 @@ export default function LandingPage() {
           <div className="mt-24 w-full flex flex-col items-center justify-center text-center">
             <h3 className="font-serif text-3xl md:text-4xl text-white mb-8">Elevate Your Enterprise.</h3>
             <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-center">
-              <Link href="/register"><button className="bg-white text-black px-8 md:px-10 py-4 rounded-full font-sans font-semibold text-sm tracking-widest uppercase">Request Full Demo</button></Link>
+              <Link href="/register"><button className="bg-[#ffffff] text-black px-8 md:px-10 py-4 rounded-full font-sans font-semibold text-sm tracking-widest uppercase">Request Full Demo</button></Link>
               <button className="px-8 md:px-10 py-4 rounded-full border border-white/30 text-white font-sans text-xs font-bold tracking-widest uppercase">View Pricing Tiers</button>
             </div>
           </div>

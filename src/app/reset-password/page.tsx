@@ -77,7 +77,7 @@ function ResetPasswordContent() {
                     <h1 className="font-serif text-3xl italic mb-4">Invalid Link</h1>
                     <p className="text-gray-500 mb-8 max-w-sm">This password reset link is invalid or has expired.</p>
                     <Link href="/forgot-password">
-                        <button className="bg-white text-black px-8 py-3 text-sm uppercase tracking-widest font-bold hover:bg-gray-200 transition-colors">
+                        <button className="bg-[#ffffff] text-black px-8 py-3 text-sm uppercase tracking-widest font-bold hover:bg-gray-200 transition-colors">
                             Request New Link
                         </button>
                     </Link>
@@ -170,7 +170,7 @@ function ResetPasswordContent() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-white text-black py-4 text-sm uppercase tracking-widest font-bold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-[#ffffff] text-black py-4 text-sm uppercase tracking-widest font-bold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? "Resetting..." : "Reset Password"}
                     </button>
